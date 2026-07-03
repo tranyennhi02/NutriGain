@@ -8,6 +8,56 @@ import AdminView from "./views/AdminView";
 import ForgotPasswordView from "./views/ForgotPasswordView";
 import LoginView from "./views/LoginView";
 import OnboardingView from "./views/OnboardingView";
+
+// ─── Logout Confirmation Modal ──────────────────────────────────────────────
+function LogoutConfirmModal({ onConfirm, onCancel }) {
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="logout-modal-title"
+    >
+      <div className="relative w-full max-w-[420px] rounded-[28px] border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-900/10 animate-fade-in">
+        {/* Icon */}
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+          <svg className="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </div>
+
+        {/* Title */}
+        <h3 id="logout-modal-title" className="text-center text-xl font-black text-slate-900 leading-tight mb-3">
+          Xác nhận đăng xuất
+        </h3>
+
+        {/* Description */}
+        <p className="text-center text-sm text-slate-600 mb-8">
+          Bạn có chắc muốn đăng xuất khỏi tài khoản?
+        </p>
+
+        {/* Actions */}
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="h-12 w-full rounded-2xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-[0.98]"
+          >
+            Đăng xuất
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-12 w-full rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+          >
+            Hủy
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 import ResetPasswordView from "./views/ResetPasswordView";
 import { defaultFormState } from "./models/recommendationModel";
 import { parseFoodList } from "./utils/foodList.js";
@@ -176,6 +226,7 @@ export default function App() {
   const [profileFormMode, setProfileFormMode] = useState("register_onboarding");
   const [locationPath, setLocationPath] = useState(() => window.location.pathname);
   const [authLoadTimedOut, setAuthLoadTimedOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const fetchedTokenRef = useRef("");
   const handledGoogleCallbackRef = useRef(false);
 
@@ -451,6 +502,11 @@ export default function App() {
   }
 
   function handleLogout() {
+    // Hiển thị modal confirmation
+    setShowLogoutConfirm(true);
+  }
+
+  function confirmLogout() {
     performLogout();
     clearOnboardingFlag();
     clearProfileCacheKeys();
@@ -462,6 +518,7 @@ export default function App() {
     setInitialMealResult(null);
     setInitialSection("overview");
     setAuthLoadTimedOut(false);
+    setShowLogoutConfirm(false);
     navigateTo("/login");
   }
 
@@ -631,18 +688,27 @@ export default function App() {
   }
 
   return (
-    <DashboardView
-      userEmail={userEmail}
-      user={authUser}
-      onLogout={handleLogout}
-      initialFormState={profileFormState}
-      initialResult={initialMealResult}
-      initialSection={locationPath === "/health-education" ? "health-education" : locationPath === "/thanh-tich" ? "thanh-tich" : initialSection}
-      onRequireProfile={handleRequireProfile}
-      onEditProfile={() => setAppView("onboarding")}
-      onProfileUpdate={handleProfileUpdate}
-      onNavigatePath={navigateTo}
-    />
+    <>
+      <DashboardView
+        userEmail={userEmail}
+        user={authUser}
+        onLogout={handleLogout}
+        initialFormState={profileFormState}
+        initialResult={initialMealResult}
+        initialSection={locationPath === "/health-education" ? "health-education" : locationPath === "/thanh-tich" ? "thanh-tich" : initialSection}
+        onRequireProfile={handleRequireProfile}
+        onEditProfile={() => setAppView("onboarding")}
+        onProfileUpdate={handleProfileUpdate}
+        onNavigatePath={navigateTo}
+      />
+      
+      {showLogoutConfirm && (
+        <LogoutConfirmModal
+          onConfirm={confirmLogout}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
+    </>
   );
 }
 

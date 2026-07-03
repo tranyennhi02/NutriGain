@@ -73,12 +73,17 @@ class UserRepository:
         profile = self.db.scalar(
             select(UserProfileEntity).where(UserProfileEntity.user_id == user_id)
         )
-        if profile is None:
+        is_new_profile = profile is None
+        if is_new_profile:
             profile = UserProfileEntity(user_id=user_id)
             self.db.add(profile)
             self.db.flush()
         for key, value in values.items():
             if hasattr(profile, key):
+                # Set initial_weight_kg only for new profiles when weight_kg is provided
+                if key == "weight_kg" and is_new_profile and value is not None:
+                    if not hasattr(profile, "initial_weight_kg") or profile.initial_weight_kg is None:
+                        profile.initial_weight_kg = float(value)
                 # Logging writes for debugging disappearance/restore of disliked_foods
                 if key == "disliked_foods" or key == "favorite_foods":
                     try:

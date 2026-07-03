@@ -13,13 +13,11 @@ pillow
 transformers
 
 # PyTorch for CLIP ingredient recognition
-# For CPU-only (lighter, faster install for local dev):
-#   python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-# For GPU (CUDA 11.8):
-#   python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-# Or just use default (auto-detect):
-torch
-torchvision
+# IMPORTANT: On Windows, use specific CPU version to avoid DLL issues
+# Upgraded to 2.6.0+ to fix CVE-2025-32434 security vulnerability required by transformers
+# Install with: pip uninstall torch torchvision -y && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0
+torchvision==0.21.0
 
 google-auth
 google-auth-oauthlib

@@ -9002,25 +9002,6 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
                   {profile.sms_reminder_enabled && (
                     <div>
                       <ProfileField label="Số điện thoại nhận SMS" name="phone_number" type="tel" value={profile.phone_number || ""} error={errors.phone_number} onChange={onChange} placeholder="Ví dụ: 0912345678" />
-                      <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={handleTestSms}
-                          disabled={smsTesting || !profile.phone_number}
-                          className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font900 text-white hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {smsTesting ? "Đang gửi..." : "Gửi SMS thử"}
-                        </button>
-                        {!profile.phone_number && (
-                          <span className="text-xs text-slate-400">Nhập số điện thoại trước để gửi thử.</span>
-                        )}
-                      </div>
-                      {smsTestResult && (
-                        <div className={`mt-2 rounded-xl px-4 py-2.5 text-sm font800 ${smsTestResult.success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                          {smsTestResult.message}
-                          {smsTestResult.sent_to && <span className="ml-1 opacity-70">({smsTestResult.sent_to})</span>}
-                        </div>
-                      )}
                     </div>
                   )}
 

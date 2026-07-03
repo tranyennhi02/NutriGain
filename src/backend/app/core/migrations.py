@@ -83,6 +83,7 @@ def ensure_database_schema(engine: Engine) -> None:
     _add_column_if_missing(engine, "user_profiles", "favorite_foods", "favorite_foods TEXT NULL")
     _add_column_if_missing(engine, "user_profiles", "disliked_foods", "disliked_foods TEXT NULL")
     _add_column_if_missing(engine, "user_profiles", "disliked_food_groups", "disliked_food_groups TEXT NULL")
+    _add_column_if_missing(engine, "user_profiles", "initial_weight_kg", "initial_weight_kg FLOAT NULL")
     _add_column_if_missing(engine, "user_profiles", "target_weight_kg", "target_weight_kg FLOAT NULL")
     _add_column_if_missing(engine, "user_profiles", "target_duration_value", "target_duration_value INTEGER NULL")
     _add_column_if_missing(engine, "user_profiles", "target_duration_unit", "target_duration_unit VARCHAR(20) NULL")
@@ -351,6 +352,28 @@ def ensure_database_schema(engine: Engine) -> None:
                 WHERE LOWER(CONCAT(COALESCE(name, ''), ' ', COALESCE(name_vi, ''))) LIKE '%grape leaves%'
                    OR LOWER(CONCAT(COALESCE(name, ''), ' ', COALESCE(name_vi, ''))) LIKE '%leaf%'
                    OR LOWER(CONCAT(COALESCE(name, ''), ' ', COALESCE(name_vi, ''))) LIKE '%greens%'
+                """
+            )
+        )
+        
+        # Data migration: Populate initial_weight_kg for existing users
+        # Priority: first weight log -> current weight_kg (if no logs)
+        connection.execute(
+            text(
+                """
+                UPDATE user_profiles up
+                LEFT JOIN (
+                    SELECT user_id, weight_kg as first_weight
+                    FROM weight_logs wl1
+                    WHERE (log_date, created_at, id) = (
+                        SELECT MIN(log_date), MIN(created_at), MIN(id)
+                        FROM weight_logs wl2
+                        WHERE wl2.user_id = wl1.user_id
+                    )
+                ) first_log ON up.user_id = first_log.user_id
+                SET up.initial_weight_kg = COALESCE(first_log.first_weight, up.weight_kg)
+                WHERE up.initial_weight_kg IS NULL
+                  AND (first_log.first_weight IS NOT NULL OR up.weight_kg IS NOT NULL)
                 """
             )
         )

@@ -21,7 +21,7 @@
 
 ## 📖 Tổng Quan
 
-**NutriGain** là hệ thống gợi ý thực đơn thông minh được thiết kế để giúp người gầy (BMI < 23) tăng cân một cách an toàn và khoa học thông qua lập kế hoạch dinh dưỡng cá nhân hóa, nhận diện nguyên liệu bằng AI, và theo dõi tiến trình được gamification.
+**NutriGain** là hệ thống gợi ý thực đơn thông minh dành cho người gầy (BMI < 23), giúp tăng cân an toàn và khoa học bằng cách xây dựng kế hoạch dinh dưỡng cá nhân hóa, nhận diện nguyên liệu bằng AI và theo dõi quá trình tăng cân thông qua cơ chế gamification.
 
 ### 🎯 Vấn Đề Chúng Tôi Giải Quyết
 
