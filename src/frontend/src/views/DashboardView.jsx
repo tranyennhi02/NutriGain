@@ -10719,7 +10719,8 @@ function EnhancedHelpPanel({ foods }) {
   };
 
   return (
-    <div id="help-panel" className="space-y-6">
+    <div id="help-panel" className="space-y-8">
+      {/* Keep Original Page Header */}
       <PageHeader
         eyebrow="SUPPORT CENTER"
         title="Hỗ trợ"
@@ -10742,38 +10743,114 @@ function EnhancedHelpPanel({ foods }) {
         }
       />
 
-      {/* Hero Support Card */}
-      <section className="glass-panel relative overflow-hidden bg-gradient-to-br from-[#0B2A4A] to-[#047857] p-8 sm:p-10 shadow-lg text-center">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-        <div className="relative z-10 mx-auto max-w-2xl">
-          <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">Chúng tôi có thể giúp gì cho bạn?</h2>
-          
-          <div className="mt-6 relative">
-            <HelpIcons.Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Tìm câu hỏi, ví dụ: BMI là gì, cách đổi món, cập nhật cân nặng..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-14 w-full rounded-full border-2 border-brand-primary bg-white pl-12 pr-4 text-base font800 text-slate-900 shadow-[0_0_16px_rgba(16,185,129,0.15)] outline-none ring-0 placeholder:text-slate-400 focus:ring-4 focus:ring-emerald-500/30 transition-all"
-            />
-          </div>
+      {/* Modern Search Hero */}
+      <div className="glass-panel overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 relative">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
+        
+        <div className="relative z-10 px-6 sm:px-10 py-8 sm:py-10">
+          <div className="max-w-3xl mx-auto text-center">
+            {/* Title */}
+            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+              Chúng tôi có thể giúp gì cho bạn?
+            </h2>
+            <p className="mt-3 text-sm sm:text-base font-semibold text-slate-300">
+              Tìm câu trả lời nhanh chóng hoặc liên hệ với đội ngũ NutriGain
+            </p>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {["Hồ sơ dinh dưỡng", "Tạo thực đơn", "Đổi món", "Nhật ký ăn uống", "Theo dõi tăng cân", "Tài khoản", "Thông báo"].map(chip => (
-              <button key={chip} onClick={() => setSearchQuery(chip)} className="rounded-full bg-white/15 px-4 py-1.5 text-sm font800 text-white hover:bg-white/25 transition whitespace-nowrap">
-                {chip}
-              </button>
-            ))}
-          </div>
+            {/* Search Bar */}
+            <div className="mt-6 relative max-w-2xl mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl blur-xl opacity-20"></div>
+              <div className="relative flex items-center">
+                <HelpIcons.Search className="absolute left-5 h-5 w-5 text-slate-400 pointer-events-none" />
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm câu hỏi, hướng dẫn... (ví dụ: cách đổi món, cập nhật cân nặng)" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-14 w-full rounded-2xl border-2 border-white/10 bg-white/10 backdrop-blur-md pl-14 pr-6 text-base font-semibold text-white placeholder:text-slate-400 outline-none focus:border-emerald-400/50 focus:ring-4 focus:ring-emerald-500/20 transition-all"
+                />
+              </div>
+            </div>
 
-          <div className="mt-8 flex justify-center gap-6 text-white/90">
-             <div className="flex items-center gap-2"><HelpIcons.HelpCircle className="h-5 w-5" /><span className="text-sm font900">10+ FAQ</span></div>
-             <div className="flex items-center gap-2"><HelpIcons.BookOpen className="h-5 w-5" /><span className="text-sm font900">Hướng dẫn 5 bước</span></div>
-             <div className="flex items-center gap-2"><HelpIcons.LifeBuoy className="h-5 w-5" /><span className="text-sm font900">Phản hồi 24/7</span></div>
+            {/* Quick Filter Chips */}
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {["Hồ sơ dinh dưỡng", "BMI & BMR", "Đổi món", "Nhật ký ăn", "Cập nhật cân nặng", "Tài khoản"].map(chip => (
+                <button 
+                  key={chip} 
+                  onClick={() => setSearchQuery(chip)} 
+                  className="rounded-full bg-white/10 backdrop-blur-sm px-3 py-1.5 text-xs sm:text-sm font-bold text-white/90 hover:bg-white/20 hover:text-white transition-all border border-white/10 hover:border-white/20"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+
+            {/* Stats Row */}
+            <div className="mt-8 grid grid-cols-3 gap-4 sm:gap-6">
+              <div className="text-center">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400">{faqs.length}+</div>
+                <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400">FAQ</div>
+              </div>
+              <div className="text-center border-x border-white/10">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400">5</div>
+                <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400">Hướng dẫn</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400">24/7</div>
+                <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400">Hỗ trợ</div>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <button 
+          onClick={() => handleScrollTo('faq-section')}
+          className="group glass-panel p-6 hover:shadow-lg transition-all hover:-translate-y-1 bg-gradient-to-br from-blue-50 to-sky-50 border-blue-100"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-blue-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+              <HelpIcons.HelpCircle className="h-6 w-6" />
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-black text-slate-900">Câu hỏi thường gặp</div>
+              <div className="text-xs font-semibold text-slate-600 mt-0.5">Tìm câu trả lời nhanh</div>
+            </div>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => handleScrollTo('quick-guide')}
+          className="group glass-panel p-6 hover:shadow-lg transition-all hover:-translate-y-1 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+              <HelpIcons.BookOpen className="h-6 w-6" />
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-black text-slate-900">Hướng dẫn sử dụng</div>
+              <div className="text-xs font-semibold text-slate-600 mt-0.5">5 bước bắt đầu</div>
+            </div>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => handleScrollTo('feedback-form')}
+          className="group glass-panel p-6 hover:shadow-lg transition-all hover:-translate-y-1 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-100"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-purple-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+              <HelpIcons.MessageSquare className="h-6 w-6" />
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-black text-slate-900">Gửi phản hồi</div>
+              <div className="text-xs font-semibold text-slate-600 mt-0.5">Liên hệ với chúng tôi</div>
+            </div>
+          </div>
+        </button>
+      </div>
 
       {/* Main Content 2 Columns */}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.8fr)] items-start">
@@ -10782,40 +10859,67 @@ function EnhancedHelpPanel({ foods }) {
         <div className="space-y-6">
           
           {/* FAQ Section */}
-          <section className="glass-panel p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <HelpIcons.HelpCircle className="h-5 w-5 text-emerald-600" />
-              <h2 className="text-xl font-black text-slate-900">Câu hỏi thường gặp</h2>
+          <section id="faq-section" className="glass-panel p-6 sm:p-8 shadow-md scroll-mt-6">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <HelpIcons.HelpCircle className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">Câu hỏi thường gặp</h2>
+                  <p className="text-sm font-semibold text-slate-500 mt-0.5">Giải đáp nhanh các vấn đề phổ biến</p>
+                </div>
+              </div>
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition"
+                >
+                  Xóa bộ lọc
+                </button>
+              )}
             </div>
             
             {Object.keys(groupedFaqs).length === 0 ? (
-              <div className="text-center py-10">
-                <HelpIcons.Search className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-                <p className="text-base font900 text-slate-600">Không tìm thấy nội dung phù hợp.</p>
-                <p className="text-sm font800 text-slate-500 mt-1">Hãy thử từ khóa khác hoặc gửi phản hồi phía dưới.</p>
+              <div className="text-center py-16">
+                <div className="mx-auto h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                  <HelpIcons.Search className="h-8 w-8 text-slate-400" />
+                </div>
+                <p className="text-lg font-black text-slate-700">Không tìm thấy kết quả</p>
+                <p className="text-sm font-semibold text-slate-500 mt-2 max-w-sm mx-auto">
+                  Hãy thử từ khóa khác hoặc liên hệ với chúng tôi qua mục phản hồi bên dưới.
+                </p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {Object.entries(groupedFaqs).map(([groupName, groupItems]) => (
                   <div key={groupName}>
-                    <h3 className="text-xs font900 uppercase tracking-wider text-emerald-700 mb-3">{groupName}</h3>
-                    <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-1 w-1 rounded-full bg-emerald-500"></div>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-emerald-700">{groupName}</h3>
+                      <div className="h-px flex-1 bg-gradient-to-r from-emerald-200 to-transparent"></div>
+                    </div>
+                    <div className="space-y-3">
                        {groupItems.map(faq => {
                           const isExpanded = expandedFaq === faq.id;
                           return (
-                            <div key={faq.id} className={`rounded-2xl border transition-colors ${isExpanded ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-100 bg-white hover:border-emerald-100'}`}>
+                            <div key={faq.id} className={`rounded-2xl border-2 transition-all ${isExpanded ? 'border-emerald-300 bg-emerald-50/80 shadow-sm' : 'border-slate-100 bg-white hover:border-emerald-100 hover:shadow-sm'}`}>
                               <button 
                                 onClick={() => setExpandedFaq(isExpanded ? null : faq.id)}
-                                className="w-full flex items-center justify-between p-4 text-left focus:outline-none"
+                                className="w-full flex items-start justify-between gap-4 p-5 text-left group"
                               >
-                                <span className="font900 text-sm text-slate-800 pr-4">{faq.title}</span>
-                                <span className={`flex-shrink-0 text-emerald-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                                  <HelpIcons.ChevronDown className="h-4 w-4" />
+                                <span className={`font-black text-sm leading-relaxed transition-colors ${isExpanded ? 'text-emerald-900' : 'text-slate-800 group-hover:text-slate-900'}`}>
+                                  {faq.title}
+                                </span>
+                                <span className={`flex-shrink-0 transition-all duration-300 ${isExpanded ? 'rotate-180 text-emerald-600' : 'text-slate-400 group-hover:text-emerald-500'}`}>
+                                  <HelpIcons.ChevronDown className="h-5 w-5" strokeWidth={2.5} />
                                 </span>
                               </button>
                               {isExpanded && (
-                                <div className="px-4 pb-4 animate-fade-in text-sm font800 text-slate-600 leading-relaxed">
-                                  {faq.answer}
+                                <div className="px-5 pb-5 animate-fade-in">
+                                  <div className="pt-3 border-t border-emerald-200/50 text-sm font-semibold text-slate-700 leading-relaxed">
+                                    {faq.answer}
+                                  </div>
                                 </div>
                               )}
                             </div>

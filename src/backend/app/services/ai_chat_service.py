@@ -26,6 +26,10 @@ from app.models.entities import (
 
 logger = logging.getLogger(__name__)
 
+# Conversation history storage (in-memory, by conversation_id)
+_conversation_history: dict[str, list[dict[str, str]]] = {}
+MAX_HISTORY_MESSAGES = 10
+
 DEFAULT_SUGGESTED_QUESTIONS = [
     "Hôm nay tôi nên ăn thêm gì?",
     "Protein là gì?",
@@ -48,11 +52,17 @@ def generate_chat_response(
         context = {"profile": {}, "meal_plan_today": None, "weight_trend": None}
     context["page"] = page
 
+    # Get or create conversation ID
+    conv_id = conversation_id or str(uuid4())
+    
+    # Get conversation history
+    history = _conversation_history.get(conv_id, [])
+
     answer = ""
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if api_key:
         try:
-            prompt = build_gemini_prompt(message, context)
+            prompt = build_gemini_prompt(message, context, history)
             answer = call_gemini(prompt)
         except Exception as exc:
             logger.warning("Gemini chat failed, using fallback: %s", exc)
@@ -60,10 +70,15 @@ def generate_chat_response(
     if not answer:
         answer = fallback_chat_response(message, context)
 
+    # Update conversation history
+    history.append({"role": "user", "message": message})
+    history.append({"role": "assistant", "message": answer})
+    _conversation_history[conv_id] = history[-MAX_HISTORY_MESSAGES:]
+
     return {
         "answer": answer,
-        "conversation_id": conversation_id or str(uuid4()),
-        "suggested_questions": suggested_questions_for(message),
+        "conversation_id": conv_id,
+        "suggested_questions": suggested_questions_for(message, context),
     }
 
 
@@ -72,8 +87,14 @@ def call_gemini(prompt: str) -> str:
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not configured")
 
-    configured_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip() or "gemini-1.5-flash"
-    models = unique_models([configured_model, "gemini-2.5-flash", "gemini-2.0-flash"])
+    # Use valid Gemini models - tested and working
+    configured_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+    models = unique_models([
+        configured_model,
+        "gemini-2.5-flash",      # Stable, fast, good for chat
+        "gemini-flash-latest",   # Always uses latest flash model
+        "gemini-2.0-flash"       # Fallback option
+    ])
     last_error: Exception | None = None
     for model in models:
         try:
@@ -81,10 +102,14 @@ def call_gemini(prompt: str) -> str:
         except Exception as exc:
             last_error = exc
             logger.warning("Gemini model %s failed: %s", model, exc)
+    
+    # If all models fail, log the error and raise
+    logger.error("All Gemini models failed. Please check your API key and model availability.")
     raise RuntimeError(f"All Gemini model attempts failed: {last_error}") from last_error
 
 
 def call_gemini_model(prompt: str, api_key: str, model: str) -> str:
+    # Use v1beta API with full model path
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = {
         "contents": [
@@ -94,9 +119,25 @@ def call_gemini_model(prompt: str, api_key: str, model: str) -> str:
             }
         ],
         "generationConfig": {
-            "temperature": 0.4,
-            "maxOutputTokens": 512,
+            "temperature": 0.7,
+            "maxOutputTokens": 600,
+            "topP": 0.9,
+            "topK": 40,
         },
+        "safetySettings": [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            }
+        ],
     }
 
     request = urllib.request.Request(
@@ -261,38 +302,102 @@ def meal_item_names(db: Session, meal_plan: MealPlan) -> dict[str, list[str]]:
     return result
 
 
-def build_gemini_prompt(message: str, context: dict[str, Any]) -> str:
-    context_text = json.dumps(context, ensure_ascii=False, indent=2)
-    return f"""Bạn là Trợ lý NutriGain, một trợ lý AI hỗ trợ người dùng tăng cân lành mạnh.
+def build_gemini_prompt(message: str, context: dict[str, Any], history: list[dict[str, str]] | None = None) -> str:
+    # Build conversation history text
+    history_text = ""
+    if history and len(history) > 0:
+        history_lines = []
+        for turn in history[-6:]:  # Last 3 exchanges (6 messages)
+            role = turn.get("role", "")
+            msg = turn.get("message", "")
+            if role == "user":
+                history_lines.append(f"Người dùng: {msg}")
+            elif role == "assistant":
+                history_lines.append(f"Trợ lý: {msg}")
+        if history_lines:
+            history_text = "\n\nLịch sử hội thoại gần đây:\n" + "\n".join(history_lines)
+    
+    # Enhanced context with better structure
+    profile = context.get("profile", {})
+    meal_plan = context.get("meal_plan_today", {})
+    weight_trend = context.get("weight_trend", {})
+    
+    # Build personalized context summary
+    personal_summary = []
+    if profile.get("weight_kg") and profile.get("target_weight_kg"):
+        current = profile["weight_kg"]
+        target = profile["target_weight_kg"]
+        diff = round(target - current, 1)
+        personal_summary.append(f"- Cân nặng hiện tại: {current}kg, mục tiêu: {target}kg (cần tăng {diff}kg)")
+    
+    if meal_plan.get("missing_kcal") is not None:
+        missing_kcal = meal_plan["missing_kcal"]
+        if missing_kcal > 0:
+            personal_summary.append(f"- Hôm nay còn thiếu {round(missing_kcal)} kcal")
+        else:
+            personal_summary.append(f"- Hôm nay đã đạt mục tiêu năng lượng")
+    
+    if meal_plan.get("missing_protein") is not None:
+        missing_protein = meal_plan["missing_protein"]
+        if missing_protein > 0:
+            personal_summary.append(f"- Hôm nay còn thiếu {round(missing_protein, 1)}g protein")
+        else:
+            personal_summary.append(f"- Hôm nay đã đạt mục tiêu protein")
+    
+    if weight_trend.get("recent_change_kg") is not None:
+        change = weight_trend["recent_change_kg"]
+        if change > 0:
+            personal_summary.append(f"- Xu hướng cân nặng: tăng {change}kg gần đây")
+        elif change < 0:
+            personal_summary.append(f"- Xu hướng cân nặng: giảm {abs(change)}kg gần đây")
+        else:
+            personal_summary.append(f"- Cân nặng đang ổn định")
+    
+    # Add meal details if available
+    if meal_plan.get("breakfast") or meal_plan.get("lunch") or meal_plan.get("dinner"):
+        meal_details = []
+        if meal_plan.get("breakfast"):
+            meal_details.append(f"  + Sáng: {', '.join(meal_plan['breakfast'][:3])}")
+        if meal_plan.get("lunch"):
+            meal_details.append(f"  + Trưa: {', '.join(meal_plan['lunch'][:3])}")
+        if meal_plan.get("dinner"):
+            meal_details.append(f"  + Tối: {', '.join(meal_plan['dinner'][:3])}")
+        if meal_details:
+            personal_summary.append("- Thực đơn hôm nay:")
+            personal_summary.extend(meal_details)
+    
+    personal_summary_text = "\n".join(personal_summary) if personal_summary else "- Chưa có đủ dữ liệu"
+    
+    return f"""Bạn là Trợ lý NutriGain, một trợ lý AI thông minh hỗ trợ tăng cân lành mạnh.
 
-Nhiệm vụ:
-- Trả lời bằng tiếng Việt.
-- Giải thích dễ hiểu, ngắn gọn, đời thường.
-- Dựa trên hồ sơ và thực đơn hôm nay nếu có dữ liệu.
-- Hỗ trợ người dùng hiểu cách ăn đủ năng lượng, đủ protein, thêm bữa phụ, ngủ đủ và theo dõi cân nặng.
-- Không body shaming.
-- Không phán xét người dùng.
-- Không khuyến khích ăn quá mức, tăng cân cực đoan hoặc hành vi không an toàn.
-- Không chẩn đoán bệnh.
-- Không thay thế bác sĩ hoặc chuyên gia dinh dưỡng.
-- Nếu câu hỏi liên quan triệu chứng bất thường, bệnh lý, rối loạn ăn uống hoặc sức khỏe nghiêm trọng, hãy khuyên người dùng tham khảo bác sĩ/chuyên gia.
+THÔNG TIN NGƯỜI DÙNG:
+{personal_summary_text}
 
-Quy tắc:
-1. Không bịa số liệu.
-2. Nếu không có dữ liệu, nói “Mình chưa có đủ dữ liệu” rồi đưa gợi ý chung an toàn.
-3. Nếu hỏi về thực đơn, dùng đúng kcal/protein/món ăn trong context.
-4. Câu trả lời nên 3–6 câu hoặc bullet ngắn.
-5. Không dùng thuật ngữ quá học thuật.
-6. Không nói “tôi là bác sĩ”.
-7. Không đưa lời khuyên y tế nguy hiểm.
+QUAN TRỌNG - ĐỌC KỸ CÂU HỎI:
+Người dùng đang hỏi: "{message}"
+→ Hãy trả lời CHÍNH XÁC câu hỏi này, đừng trả lời chung chung!
 
-Context người dùng:
-{context_text}
+CÁCH TRẢ LỜI:
+1. ĐỌC KỸ câu hỏi người dùng
+2. Trả lời ĐÚNG câu hỏi đó, không nói chuyện khác
+3. Trả lời NGẮN GỌN (2-4 câu)
+4. Nếu cần, giải thích thêm 1-2 câu
 
-Câu hỏi người dùng:
-{message}
+VÍ DỤ:
+- Hỏi "tôi cần uống nước không?" → Trả lời về việc uống nước
+- Hỏi "protein là gì?" → Giải thích protein
+- Hỏi "hôm nay tôi ăn gì?" → Xem thực đơn và trả lời
+- Hỏi "tôi còn thiếu gì?" → Xem kcal/protein còn thiếu
 
-Hãy trả lời ngắn gọn, thân thiện, dễ hiểu."""
+QUY TẮC:
+✓ Trả lời bằng tiếng Việt thân thiện
+✓ Dùng "mình" thay "tôi", xưng hô "bạn"
+✓ Có thể thêm emoji nhẹ (💧 😊 🥛)
+✓ KHÔNG chẩn đoán bệnh
+✓ KHÔNG body shaming
+✓ KHÔNG bịa số liệu{history_text}
+
+Bây giờ hãy trả lời ĐÚNG câu hỏi: {message}"""
 
 
 def fallback_chat_response(message: str, context: dict[str, Any]) -> str:
@@ -303,6 +408,9 @@ def fallback_chat_response(message: str, context: dict[str, Any]) -> str:
 
     if has_any(text, ["dau", "chong mat", "non", "tieu chay keo dai", "ngat", "benh", "thuoc", "roi loan an uong", "sut can nhanh"]):
         return "Mình không thể chẩn đoán tình trạng sức khỏe. Nếu bạn có triệu chứng bất thường hoặc lo lắng về cân nặng, bạn nên tham khảo bác sĩ hoặc chuyên gia dinh dưỡng."
+
+    if has_any(text, ["uong nuoc", "nuoc", "hydrate", "khat nuoc"]):
+        return "Có nha! Uống nước rất quan trọng khi tăng cân 💧\n\nKhi tăng cân, bạn nên uống đủ 2-2.5 lít nước mỗi ngày. Nước giúp:\n✓ Cơ thể hấp thu dinh dưỡng tốt hơn\n✓ Tiêu hóa thức ăn dễ dàng hơn\n✓ Tránh táo bón khi ăn nhiều protein\n\nMẹo: Uống nước trước và sau mỗi bữa ăn khoảng 30 phút."
 
     if has_any(text, ["protein", "dam"]):
         answer = "Protein là chất giúp cơ thể xây dựng cơ bắp và phục hồi. Bạn có thể tìm thấy protein trong trứng, sữa, thịt, cá, đậu phụ hoặc đậu nành. Khi tăng cân, bạn nên chú ý cả năng lượng và protein."
@@ -351,20 +459,33 @@ def fallback_chat_response(message: str, context: dict[str, Any]) -> str:
     return "Mình có thể hỗ trợ bạn về thực đơn, bữa phụ, protein, giấc ngủ và cách tăng cân lành mạnh. Bạn muốn mình xem thực đơn hôm nay hay giải thích một chủ đề nào trước?"
 
 
-def suggested_questions_for(message: str) -> list[str]:
+def suggested_questions_for(message: str, context: dict[str, Any]) -> list[str]:
     text = normalize_text(message)
+    meal_plan = context.get("meal_plan_today") or {}
+    
     if has_any(text, ["protein", "dam"]):
         return [
             "Tôi nên ăn món nào giàu protein?",
             "Protein hôm nay của tôi đủ chưa?",
             "Tôi nên thêm gì vào bữa phụ?",
         ]
+    
     if has_any(text, ["kcal", "calo", "thieu", "an them", "bua phu", "con thieu gi"]):
+        suggestions = ["Tôi nên thêm bữa phụ gì?"]
+        
+        if meal_plan.get("missing_protein") and meal_plan["missing_protein"] > 0:
+            suggestions.append("Protein hôm nay đã đủ chưa?")
+        
+        suggestions.append("Thực đơn hôm nay có phù hợp không?")
+        return suggestions
+    
+    if has_any(text, ["thuc don", "sáng", "trua", "toi", "mon an"]):
         return [
-            "Tôi nên thêm bữa phụ gì?",
-            "Protein hôm nay đã đủ chưa?",
-            "Thực đơn hôm nay có phù hợp không?",
+            "Tôi còn thiếu gì hôm nay?",
+            "Tôi nên ăn thêm gì?",
+            "Làm sao để đạt mục tiêu protein?",
         ]
+    
     return DEFAULT_SUGGESTED_QUESTIONS
 
 

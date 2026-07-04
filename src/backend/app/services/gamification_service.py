@@ -57,12 +57,14 @@ class GamificationService:
         week_start = today - timedelta(days=current_weekday)
         
         week_days = [False] * 7  # [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
-        for completed_date in completed_dates:
-            # Check if this completed date is in the current week
-            if week_start <= completed_date <= week_start + timedelta(days=6):
-                day_index = (completed_date - week_start).days
-                if 0 <= day_index < 7:
-                    week_days[day_index] = True
+        
+        # CRITICAL FIX: Check ALL days in current week, not just streak days
+        # This ensures that non-consecutive completed days still show checkmarks
+        for day_offset in range(7):
+            check_date = week_start + timedelta(days=day_offset)
+            # Only check dates up to today (don't check future dates)
+            if check_date <= today and self._completed_main_meals(db, user.id, check_date):
+                week_days[day_offset] = True
 
         # Auto-recalculate achievements every time summary is fetched
         # so badges unlock as soon as the user meets the criteria
