@@ -63,6 +63,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    feedbacks: Mapped[list["UserFeedback"]] = relationship(
+        back_populates="user",
+        foreign_keys="[UserFeedback.user_id]",
+        cascade="all, delete-orphan",
+    )
 
 
 class PasswordResetToken(Base):
@@ -476,3 +481,22 @@ class UserChallenge(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     user: Mapped[User] = relationship(back_populates="challenges")
+
+
+class UserFeedback(Base):
+    __tablename__ = "user_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)  # wrong_image, abnormal_macro, not_working, ui_glitch, other
+    item: Mapped[str | None] = mapped_column(String(255), nullable=True)  # food name or page location
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)  # pending, in_review, resolved, dismissed
+    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="feedbacks", foreign_keys=[user_id])
+    resolver: Mapped[User | None] = relationship(foreign_keys=[resolved_by])

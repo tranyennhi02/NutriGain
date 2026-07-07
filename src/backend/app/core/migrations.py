@@ -377,3 +377,29 @@ def ensure_database_schema(engine: Engine) -> None:
                 """
             )
         )
+
+
+    # User feedback table creation
+    inspector = inspect(engine)
+    if "user_feedback" not in inspector.get_table_names():
+        with engine.begin() as connection:
+            connection.execute(text("""
+                CREATE TABLE user_feedback (
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    user_id INTEGER NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    item VARCHAR(255) NULL,
+                    description TEXT NOT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+                    admin_note TEXT NULL,
+                    resolved_by INTEGER NULL,
+                    resolved_at DATETIME NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL,
+                    INDEX idx_user_feedback_user_id (user_id),
+                    INDEX idx_user_feedback_created_at (created_at),
+                    INDEX idx_user_feedback_status (status)
+                )
+            """))

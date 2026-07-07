@@ -804,3 +804,39 @@ class RecommendationHistoryResponse(BaseModel):
 
 class RecommendationHistoryDetail(RecommendationHistoryItem):
     meal_plan: dict[str, list[FoodItemView]]
+
+
+class FeedbackCreate(BaseModel):
+    type: str = Field(..., pattern="^(wrong_image|abnormal_macro|not_working|ui_glitch|other)$")
+    item: str | None = None
+    description: str = Field(..., min_length=10)
+
+
+class FeedbackUpdate(BaseModel):
+    status: str | None = Field(None, pattern="^(pending|in_review|resolved|dismissed)$")
+    admin_note: str | None = None
+
+
+class FeedbackResponse(BaseModel):
+    id: int
+    user_id: int
+    user_email: str | None = None
+    user_name: str | None = None
+    type: str
+    item: str | None
+    description: str
+    status: str
+    admin_note: str | None
+    resolved_by: int | None
+    resolved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FeedbackListResponse(BaseModel):
+    items: list[FeedbackResponse]
+    total: int
+    pending_count: int = 0

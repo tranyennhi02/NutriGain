@@ -2246,6 +2246,31 @@ function DashboardView({ userEmail, onLogout, initialFormState, initialResult, i
     }
   }
 
+  async function handleProfileSave() {
+    if (isSubmitting) return;
+    const nextErrors = validateProfile(formState);
+    setFormErrors(nextErrors);
+    setSubmitError("");
+
+    if (Object.keys(nextErrors).length > 0) {
+      setSubmitError("Hồ sơ chưa hợp lệ. Vui lòng kiểm tra lại các trường thông tin.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await saveUserProfile(formState);
+      setSubmitError("");
+      setGenerationNotice("Đã lưu thông tin hồ sơ thành công.");
+      console.log("[PROFILE SAVED SUCCESSFULLY]");
+    } catch (err) {
+      setSubmitError(err.message || "Không thể lưu hồ sơ. Vui lòng thử lại.");
+      console.error("[PROFILE SAVE FAILED]", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function requestRegenerateRecommendation() {
     if (isSubmitting || isGeneratingMealPlan) return;
 
@@ -2619,6 +2644,24 @@ function DashboardView({ userEmail, onLogout, initialFormState, initialResult, i
     setDrawerOpen(false);
     onNavigatePath?.(path);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    // Reload consumption logs when navigating to overview to ensure meal ticks are synced
+    if (sectionId === "overview" && result?.meal_plan_id) {
+      loadTodayMealPlan()
+        .then((today) => {
+          if (today && today.meal_plan_id === result.meal_plan_id) {
+            const refreshedLog = buildMealLogFromTodayConsumption(today, result);
+            console.log("[MEAL LOG REFRESHED ON NAV TO OVERVIEW]", {
+              entriesCount: Object.keys(refreshedLog?.entries || {}).length,
+              section: sectionId,
+            });
+            setMealLog(refreshedLog || { entries: {}, manualItems: [] });
+          }
+        })
+        .catch((err) => {
+          console.error("[FAILED TO REFRESH MEAL LOG ON NAV]", err);
+        });
+    }
   }
 
   function toggleFavorite(mealId) {
@@ -2699,7 +2742,7 @@ function DashboardView({ userEmail, onLogout, initialFormState, initialResult, i
       ["Metric", "Value", "Unit"],
       ["Năng lượng mục tiêu", summary.targetCalories, "kcal"],
       ["Năng lượng thực đơn", mealPlanValidation.totalCalories, "kcal"],
-      ["BMI", summary.bmi, ""],
+      ["BMI", summary.bmi != null ? Number(summary.bmi).toFixed(1) : "N/A", ""],
       ["BMR", summary.bmr, "kcal"],
       ["TDEE", summary.tdee, "kcal"],
       ["Protein thực đơn", mealPlanValidation.totalProtein, "g"],
@@ -2852,6 +2895,7 @@ function DashboardView({ userEmail, onLogout, initialFormState, initialResult, i
                 onRestoreMealPlan={setResult}
                 onProfileChange={handleProfileChange}
                 onRegenerate={requestRegenerateRecommendation}
+                onSaveProfile={handleProfileSave}
                 onOpenSetup={openMealPlanSetup}
                 onOpenAddToMeal={(food) => setAddToMealRequest({ food, mealKey: null })}
                 onOpenDislikeFood={(food) => setDislikeRequest(food)}
@@ -2979,7 +3023,7 @@ function GoalAchievedDialog({ profileSettings, weightSummary, onEditProfile, onM
   }
 
   const maxAllowedWeight = heightCm > 0
-    ? Number((24.9 * (heightCm / 100) * (heightCm / 100)).toFixed(1))
+    ? Number((22.9 * (heightCm / 100) * (heightCm / 100)).toFixed(1))
     : null;
 
   // Kiểm tra trực tiếp localStorage khi render để tránh flash
@@ -3023,7 +3067,7 @@ function GoalAchievedDialog({ profileSettings, weightSummary, onEditProfile, onM
             <p className="text-center text-xs text-slate-400">
               Mục tiêu tối đa:{" "}
               <span className="font-semibold text-slate-600">{maxAllowedWeight} kg</span>{" "}
-              (BMI 25 — ngưỡng Bình thường)
+              (BMI 22.9 — ngưỡng Bình thường theo chuẩn Châu Á)
             </p>
           )}
           <button
@@ -3847,6 +3891,7 @@ function DashboardContent({
   onRestoreMealPlan,
   onProfileChange,
   onRegenerate,
+  onSaveProfile,
   onOpenSetup,
   onOpenAddToMeal,
   onOpenDislikeFood,
@@ -3965,6 +4010,7 @@ function DashboardContent({
           eligibility={eligibility}
           errors={buildProfileSoftErrors(profileSettings)}
           onChange={onProfileChange}
+          onSaveProfile={onSaveProfile}
           onRegenerate={onRegenerate}
           onEditProfile={onEditProfile}
           isSubmitting={isSubmitting}
@@ -8512,7 +8558,7 @@ function EligibilityCard({ eligibility }) {
     <section className={`rounded-3xl border p-5 ${tone}`}>
       <p className="text-xs font900 uppercase tracking-[0.18em] opacity-80">Trạng thái đủ điều kiện</p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
-        <h3 className="text-4xl font-black">{eligibility.bmi ?? "N/A"}</h3>
+        <h3 className="text-4xl font-black">{eligibility.bmi != null ? Number(eligibility.bmi).toFixed(1) : "N/A"}</h3>
         <span className="pb-1 text-sm font900">{eligibility.statusLabel}</span>
       </div>
       <p className="mt-3 text-sm font800 leading-6">{eligibility.reason}</p>
@@ -8828,7 +8874,7 @@ function FoodDetailModal({ food, onClose }) {
   );
 }
 
-function AccountSettingsPage({ email, profile, eligibility, errors, onChange, onRegenerate, onEditProfile, isSubmitting }) {
+function AccountSettingsPage({ email, profile, eligibility, errors, onChange, onSaveProfile, onRegenerate, onEditProfile, isSubmitting }) {
   const [activeTab, setActiveTab] = useState("profile");
   const [smsTesting, setSmsTesting] = useState(false);
   const [smsTestResult, setSmsTestResult] = useState(null); // { success, message, sent_to }
@@ -8848,7 +8894,6 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
 
   const tabs = [
     { id: 'profile', label: 'Hồ sơ cá nhân', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-    { id: 'nutrition', label: 'Mục tiêu dinh dưỡng', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
     { id: 'security', label: 'Bảo mật', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
     { id: 'preferences', label: 'Tuỳ chỉnh', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' }
   ];
@@ -8919,21 +8964,24 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
             <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
               <button
                 type="button"
+                className="h-12 rounded-2xl bg-slate-700 px-6 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-800 transition"
+                onClick={onSaveProfile}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Đang lưu..." : "Lưu thông tin"}
+              </button>
+              <button
+                type="button"
                 className="h-12 rounded-2xl bg-emerald-600 px-6 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-emerald-700 transition"
                 onClick={onRegenerate}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Đang cập nhật..." : "Cập nhật và tạo lại thực đơn"}
+                {isSubmitting ? "Đang tạo..." : "Tạo lại thực đơn"}
               </button>
             </div>
           </section>
         )}
 
-        {activeTab === 'nutrition' && (
-          <div className="animate-fade-in space-y-5">
-             <EligibilityCard eligibility={eligibility} />
-          </div>
-        )}
 
         {activeTab === 'security' && (
           <section className="glass-panel p-5 sm:p-6 animate-fade-in">
@@ -9002,6 +9050,23 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
                   {profile.sms_reminder_enabled && (
                     <div>
                       <ProfileField label="Số điện thoại nhận SMS" name="phone_number" type="tel" value={profile.phone_number || ""} error={errors.phone_number} onChange={onChange} placeholder="Ví dụ: 0912345678" />
+                      
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          className="h-10 rounded-xl bg-blue-600 px-4 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-700 transition"
+                          onClick={handleTestSms}
+                          disabled={smsTesting || !profile.phone_number}
+                        >
+                          {smsTesting ? "Đang gửi..." : "Test gửi SMS"}
+                        </button>
+                        {smsTestResult && (
+                          <span className={`text-sm font800 ${smsTestResult.success ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {smsTestResult.message}
+                            {smsTestResult.sent_to && ` (${smsTestResult.sent_to})`}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -9012,6 +9077,17 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
                       <ProfileField label="Giờ ăn tối" name="dinner_time" type="time" value={profile.dinner_time || "18:30"} error={errors.dinner_time} onChange={onChange} />
                     </div>
                   )}
+
+                  <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-5">
+                    <button
+                      type="button"
+                      className="h-12 rounded-2xl bg-slate-700 px-6 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-800 transition"
+                      onClick={onSaveProfile}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Đang lưu..." : "Lưu"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -10708,8 +10784,60 @@ function EnhancedHelpPanel({ foods }) {
 
   function submitReport(event) {
     event.preventDefault();
-    if (!report.item.trim() || !report.description.trim()) return;
+    if (!report.description.trim()) return;
+    
     setSubmitted(true);
+    
+    // Get token from session
+    let token = null;
+    try {
+      const session = JSON.parse(localStorage.getItem("nutrigain_auth"));
+      token = session?.accessToken;
+    } catch {
+      console.error("Failed to get access token from session");
+    }
+    
+    if (!token) {
+      console.error("No access token found - user may not be logged in");
+      setTimeout(() => setSubmitted(false), 5000);
+      return;
+    }
+    
+    // Send feedback to backend
+    const payload = {
+      type: report.type,
+      item: report.item.trim() || null, // Send null if empty
+      description: report.description.trim(),
+    };
+    
+    console.log("Sending feedback payload:", payload);
+    
+    fetch("/api/v1/feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((errorData) => {
+            console.error("Feedback submission failed:", errorData);
+            throw new Error(`HTTP ${res.status}: ${JSON.stringify(errorData)}`);
+          });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Feedback submitted successfully:", data);
+        // Reset form after successful submission
+        setReport({ type: "wrong_image", item: "", description: "" });
+      })
+      .catch((error) => {
+        console.error("Error submitting feedback:", error);
+      });
+    
     setTimeout(() => setSubmitted(false), 5000);
   }
 
@@ -11131,7 +11259,7 @@ function NotificationPanel({ progress, summary, validation }) {
         />
         <NoticeRow
           tone="blue"
-          title={`BMI ${summary.bmi} - ${summary.bmiStatus}`}
+          title={`BMI ${summary.bmi != null ? Number(summary.bmi).toFixed(1) : 'N/A'} - ${summary.bmiStatus}`}
           text="Theo dõi cân nặng hằng tuần để điều chỉnh mức tăng phù hợp."
         />
       </div>
@@ -11276,7 +11404,7 @@ function buildEligibilityStatus(profile, summary) {
   const profileBmi = calculateProfileBmi(profile);
   const bmi = Number.isFinite(profileBmi)
     ? Number(profileBmi.toFixed(1))
-    : (Number.isFinite(summary.bmi) && summary.bmi > 0 ? summary.bmi : null);
+    : (Number.isFinite(summary.bmi) && summary.bmi > 0 ? Number(summary.bmi.toFixed(1)) : null);
   const status = classifyAsianBMI(bmi);
   return {
     bmi,
@@ -11849,7 +11977,7 @@ function buildNotifications(progress, summary, validation, dataWarnings) {
       tone: "blue",
       category: "profile",
       icon: "scale",
-      title: `BMI ${safeSummary.bmi} - ${safeSummary.bmiStatus}`,
+      title: `BMI ${safeSummary.bmi != null ? Number(safeSummary.bmi).toFixed(1) : 'N/A'} - ${safeSummary.bmiStatus}`,
       text: "Cập nhật cân nặng định kỳ để hệ thống tính lại nhu cầu năng lượng.",
       actionLabel: "Cập nhật hồ sơ",
       actionTarget: "account",

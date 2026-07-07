@@ -13,6 +13,8 @@ const iconPaths = {
   test:
     "M9 3h6v2l-1 1v3.4l4.66 7.76A2.5 2.5 0 0 1 16.51 21H7.49a2.5 2.5 0 0 1-2.15-3.84L10 9.4V6L9 5V3Zm2.12 8L8 16.2h8L12.88 11h-1.76Z",
   meal: "M7 3h10a2 2 0 0 1 2 2v16l-7-3-7 3V5a2 2 0 0 1 2-2Zm1 4h8v2H8V7Zm0 4h8v2H8v-2Z",
+  message:
+    "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6l-4 4V6a2 2 0 0 1 2-2Zm2 3v2h12V7H6Zm0 4v2h12v-2H6Zm0 4v2h8v-2H6Z",
   errors:
     "M12 2 1.8 20h20.4L12 2Zm1 14h-2v2h2v-2Zm0-7h-2v5h2V9Z",
   settings:
@@ -63,8 +65,8 @@ export function AdminStatusPill({ status, children }) {
   const normalized = String(status || "").toLowerCase();
   let tone = "slate";
   if (["active", "valid", "success", "resolved", "verified_real", "real"].includes(normalized)) tone = "emerald";
-  if (["minor_adjustment", "pending", "pexels_pending", "warning"].includes(normalized)) tone = "amber";
-  if (["locked", "major_adjustment", "invalid", "error", "failed", "critical", "unresolved"].includes(normalized)) tone = "red";
+  if (["minor_adjustment", "pending", "pexels_pending", "warning", "in_review"].includes(normalized)) tone = "amber";
+  if (["locked", "major_adjustment", "invalid", "error", "failed", "critical", "unresolved", "dismissed"].includes(normalized)) tone = "red";
   if (["admin", "super_admin", "info"].includes(normalized)) tone = "blue";
   return <AdminBadge tone={tone}>{children || status || "Không rõ"}</AdminBadge>;
 }

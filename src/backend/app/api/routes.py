@@ -17,7 +17,7 @@ from app.api.dependencies import get_current_user, get_optional_current_user, re
 from app.api.v1.routes.ai_chat import router as ai_chat_router
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.entities import User
+from app.models.entities import User, UserFeedback
 from app.services.auth_service import AuthService
 from app.services.food_service import FoodService, InteractionService, UserService
 from app.services.nutrition_statistics_service import NutritionStatisticsService
@@ -39,6 +39,10 @@ from app.views.schemas import (
     CurrentUserView,
     FavoriteFoodListResponse,
     FavoriteFoodResponse,
+    FeedbackCreate,
+    FeedbackUpdate,
+    FeedbackResponse,
+    FeedbackListResponse,
     FoodCategoryCreate,
     FoodCategoryListResponse,
     FoodCategoryUpdate,
@@ -1524,3 +1528,163 @@ def admin_resolve_system_error(
     _: User = Depends(require_admin),
 ) -> dict:
     return _require_admin_service().resolve_error(db, error_id)
+
+
+# ============================================================================
+# USER FEEDBACK ENDPOINTS
+# ============================================================================
+
+@router.post("/feedback", response_model=FeedbackResponse, tags=["feedback"])
+def create_feedback(
+    payload: FeedbackCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FeedbackResponse:
+    """User submits feedback from support page"""
+    feedback = UserFeedback(
+        user_id=current_user.id,
+        type=payload.type,
+        item=payload.item,
+        description=payload.description,
+        status="pending",
+    )
+    db.add(feedback)
+    db.commit()
+    db.refresh(feedback)
+    
+    return FeedbackResponse(
+        id=feedback.id,
+        user_id=feedback.user_id,
+        user_email=current_user.email,
+        user_name=current_user.full_name,
+        type=feedback.type,
+        item=feedback.item,
+        description=feedback.description,
+        status=feedback.status,
+        admin_note=feedback.admin_note,
+        resolved_by=feedback.resolved_by,
+        resolved_at=feedback.resolved_at,
+        created_at=feedback.created_at,
+        updated_at=feedback.updated_at,
+    )
+
+
+@router.get("/admin/feedback", response_model=FeedbackListResponse, tags=["admin"])
+def admin_list_feedback(
+    status: str | None = Query(default=None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> FeedbackListResponse:
+    """Admin lists all user feedback"""
+    query = db.query(UserFeedback).join(User, UserFeedback.user_id == User.id)
+    
+    if status:
+        query = query.filter(UserFeedback.status == status)
+    
+    total = query.count()
+    pending_count = db.query(UserFeedback).filter(UserFeedback.status == "pending").count()
+    
+    items = query.order_by(UserFeedback.created_at.desc()).offset(offset).limit(limit).all()
+    
+    feedback_list = []
+    for feedback in items:
+        user = db.query(User).filter(User.id == feedback.user_id).first()
+        feedback_list.append(
+            FeedbackResponse(
+                id=feedback.id,
+                user_id=feedback.user_id,
+                user_email=user.email if user else None,
+                user_name=user.full_name if user else None,
+                type=feedback.type,
+                item=feedback.item,
+                description=feedback.description,
+                status=feedback.status,
+                admin_note=feedback.admin_note,
+                resolved_by=feedback.resolved_by,
+                resolved_at=feedback.resolved_at,
+                created_at=feedback.created_at,
+                updated_at=feedback.updated_at,
+            )
+        )
+    
+    return FeedbackListResponse(
+        items=feedback_list,
+        total=total,
+        pending_count=pending_count,
+    )
+
+
+@router.get("/admin/feedback/{feedback_id}", response_model=FeedbackResponse, tags=["admin"])
+def admin_get_feedback(
+    feedback_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> FeedbackResponse:
+    """Admin gets detailed feedback"""
+    feedback = db.query(UserFeedback).filter(UserFeedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    
+    user = db.query(User).filter(User.id == feedback.user_id).first()
+    
+    return FeedbackResponse(
+        id=feedback.id,
+        user_id=feedback.user_id,
+        user_email=user.email if user else None,
+        user_name=user.full_name if user else None,
+        type=feedback.type,
+        item=feedback.item,
+        description=feedback.description,
+        status=feedback.status,
+        admin_note=feedback.admin_note,
+        resolved_by=feedback.resolved_by,
+        resolved_at=feedback.resolved_at,
+        created_at=feedback.created_at,
+        updated_at=feedback.updated_at,
+    )
+
+
+@router.patch("/admin/feedback/{feedback_id}", response_model=FeedbackResponse, tags=["admin"])
+def admin_update_feedback(
+    feedback_id: int,
+    payload: FeedbackUpdate,
+    current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> FeedbackResponse:
+    """Admin updates feedback status and adds notes"""
+    feedback = db.query(UserFeedback).filter(UserFeedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    
+    if payload.status:
+        feedback.status = payload.status
+        if payload.status in ["resolved", "dismissed"]:
+            feedback.resolved_by = current_admin.id
+            feedback.resolved_at = datetime.utcnow()
+    
+    if payload.admin_note is not None:
+        feedback.admin_note = payload.admin_note
+    
+    db.commit()
+    db.refresh(feedback)
+    
+    user = db.query(User).filter(User.id == feedback.user_id).first()
+    
+    return FeedbackResponse(
+        id=feedback.id,
+        user_id=feedback.user_id,
+        user_email=user.email if user else None,
+        user_name=user.full_name if user else None,
+        type=feedback.type,
+        item=feedback.item,
+        description=feedback.description,
+        status=feedback.status,
+        admin_note=feedback.admin_note,
+        resolved_by=feedback.resolved_by,
+        resolved_at=feedback.resolved_at,
+        created_at=feedback.created_at,
+        updated_at=feedback.updated_at,
+    )
+

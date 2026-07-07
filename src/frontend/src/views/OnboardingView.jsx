@@ -212,7 +212,7 @@ function buildRegeneratePayload(formData, freshProfile = null) {
     disliked_food_groups: parseFoodList(source.disliked_food_groups),
   };
 }
-function fmt(n) { return Number.isFinite(n) ? Math.round(n) : "—"; }
+function fmt(n) { return Number.isFinite(n) ? Number(n.toFixed(1)) : "—"; }
 
 function getMealPlanItems(mealPlan) {
   if (!mealPlan) return [];

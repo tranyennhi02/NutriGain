@@ -23,8 +23,8 @@ const NAV_ITEMS = [
   { key: "food-images", label: "Ảnh món ăn", icon: "image" },
   { key: "recommendation-test", label: "Kiểm tra gợi ý", icon: "test" },
   { key: "meal-plans", label: "Thực đơn", icon: "meal" },
+  { key: "feedback", label: "Phản hồi", icon: "message" },
   { key: "system-errors", label: "Lỗi hệ thống", icon: "errors" },
-  { key: "settings", label: "Cài đặt", icon: "settings" },
 ];
 
 const PAGE_META = {
@@ -52,13 +52,13 @@ const PAGE_META = {
     title: "Thực đơn",
     description: "Theo dõi các thực đơn đã tạo và mở chi tiết theo dạng drawer.",
   },
+  feedback: {
+    title: "Phản hồi người dùng",
+    description: "Xem và xử lý phản hồi từ người dùng gửi qua trang hỗ trợ.",
+  },
   "system-errors": {
     title: "Lỗi hệ thống",
     description: "Kiểm tra lỗi API gần đây, phân loại mức độ và xử lý lỗi đã kiểm tra.",
-  },
-  settings: {
-    title: "Cài đặt",
-    description: "Tổng hợp cấu hình hiển thị và phân bố nhóm món đang dùng trong hệ thống.",
   },
 };
 
@@ -93,6 +93,15 @@ const STATUS_LABELS = {
   USER: "Người dùng",
   ADMIN: "Admin",
   SUPER_ADMIN: "Super Admin",
+  pending: "Chờ xử lý",
+  in_review: "Đang xem xét",
+  resolved: "Đã giải quyết",
+  dismissed: "Đã bỏ qua",
+  wrong_image: "Ảnh món ăn sai",
+  abnormal_macro: "Dữ liệu dinh dưỡng sai",
+  not_working: "Lỗi sinh thực đơn",
+  ui_glitch: "Lỗi giao diện",
+  other: "Vấn đề khác",
 };
 
 const DEFAULT_TEST_FORM = {
@@ -914,87 +923,136 @@ function FoodsPage({ refreshKey }) {
   if (loading) return <AdminLoadingSkeleton rows={7} />;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {imageToast ? (
         <div
           className={cx(
-            "fixed right-6 top-6 z-[60] max-w-sm rounded-2xl border px-4 py-3 text-sm font-semibold shadow-xl",
+            "fixed right-6 top-6 z-[60] max-w-sm rounded-2xl border px-5 py-4 text-sm font-semibold shadow-2xl backdrop-blur-sm",
             imageToast.type === "error"
-              ? "border-red-200 bg-red-50 text-red-700"
-              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+              ? "border-red-200/80 bg-red-50/95 text-red-700"
+              : "border-emerald-200/80 bg-emerald-50/95 text-emerald-700"
           )}
         >
           {imageToast.message}
         </div>
       ) : null}
-      <AdminSectionCard>
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <TextInput className="lg:flex-1" value={filters.q} onChange={(q) => { setFilters((prev) => ({ ...prev, q })); setPage(1); }} placeholder="Tìm tên món hoặc thực phẩm..." />
-            <SelectInput value={filters.category} onChange={(category) => { setFilters((prev) => ({ ...prev, category })); setPage(1); }} className="lg:w-64">
+      
+      {/* Modern Filter Card */}
+      <div className="rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm shadow-slate-900/5">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            {/* Search Input with Icon */}
+            <div className="relative lg:flex-1">
+              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+                <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={filters.q}
+                onChange={(e) => { setFilters((prev) => ({ ...prev, q: e.target.value })); setPage(1); }}
+                placeholder="Tìm kiếm món ăn, thực phẩm..."
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+              />
+            </div>
+            
+            {/* Category Select */}
+            <select
+              value={filters.category}
+              onChange={(e) => { setFilters((prev) => ({ ...prev, category: e.target.value })); setPage(1); }}
+              className="h-12 rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 lg:w-64"
+            >
               <option value="">Tất cả nhóm món</option>
               {CATEGORY_OPTIONS.map((key) => <option key={key} value={key}>{CATEGORY_MAP[key]}</option>)}
-            </SelectInput>
+            </select>
           </div>
+          
+          {/* Filter Chips */}
           <AdminFilterChips items={chips} value={filters.chip} onChange={setChip} />
         </div>
-      </AdminSectionCard>
+      </div>
 
       {error ? <AdminEmptyState icon="errors" title="Không tải được thực phẩm" description={error} /> : null}
 
-      <AdminDataTable
-        columns={[
-          { key: "food", label: "Món ăn" },
-          { key: "nutrition", label: "Dinh dưỡng" },
-          { key: "eligible", label: "Gợi ý" },
-          { key: "image", label: "Ảnh" },
-          { key: "actions", label: "Hành động", align: "right" },
-        ]}
-        empty={<AdminEmptyState icon="foods" title="Không có món ăn" description="Không có thực phẩm phù hợp với bộ lọc hiện tại." />}
-        minWidth="820px"
-      >
-        {items.map((food) => {
-          const imageState = getImageState(food);
-          const excluded = isFoodExcluded(food);
-          return (
-            <tr key={food.food_id || food.id} className="h-16 transition hover:bg-slate-50">
-              <td className="px-5 py-3.5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <FoodThumb food={food} />
-                  <div className="min-w-0">
-                    <button type="button" onClick={() => setSelected(food)} className="block max-w-[320px] truncate text-left text-sm font-bold text-[#081832] hover:text-blue-700" title={food.name}>
-                      {food.name || "Chưa có tên"}
-                    </button>
-                    <p className="text-[13px] text-slate-500">{CATEGORY_MAP[food.category] || food.category || "Chưa phân nhóm"}</p>
+      {/* Enhanced Table Card */}
+      <div className="rounded-3xl border border-slate-200/60 bg-white shadow-sm shadow-slate-900/5 overflow-hidden">
+        <AdminDataTable
+          columns={[
+            { key: "food", label: "MÓN ĂN" },
+            { key: "nutrition", label: "DINH DƯỠNG" },
+            { key: "eligible", label: "GỢI Ý" },
+            { key: "image", label: "ẢNH" },
+            { key: "actions", label: "HÀNH ĐỘNG", align: "right" },
+          ]}
+          empty={<AdminEmptyState icon="foods" title="Không có món ăn" description="Không có thực phẩm phù hợp với bộ lọc hiện tại." />}
+          minWidth="820px"
+        >
+          {items.map((food) => {
+            const imageState = getImageState(food);
+            const excluded = isFoodExcluded(food);
+            return (
+              <tr key={food.food_id || food.id} className="group border-b border-slate-100 last:border-b-0 transition hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-transparent">
+                <td className="px-6 py-4">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border-2 border-slate-100 bg-slate-50 shadow-sm group-hover:border-emerald-200 transition">
+                      <FoodThumb food={food} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <button 
+                        type="button" 
+                        onClick={() => setSelected(food)} 
+                        className="block max-w-[320px] truncate text-left text-sm font-bold text-slate-900 hover:text-emerald-600 transition" 
+                        title={food.name}
+                      >
+                        {food.name || "Chưa có tên"}
+                      </button>
+                      <p className="mt-0.5 text-xs font-medium text-slate-500">{CATEGORY_MAP[food.category] || food.category || "Chưa phân nhóm"}</p>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td className="px-5 py-3.5">
-                <p className="text-lg font-extrabold leading-none text-[#081832]">{formatNumber(food.calories)} kcal</p>
-                <p className="mt-1 text-[13px] font-medium text-slate-500">{formatNumber(food.protein, "g")} protein</p>
-              </td>
-              <td className="px-5 py-3.5">
-                <AdminStatusPill status={excluded ? "error" : food.menu_eligible ? "valid" : "invalid"}>
-                  {excluded ? "Đã loại khỏi gợi ý" : food.menu_eligible ? "Được gợi ý" : "Tắt gợi ý"}
-                </AdminStatusPill>
-              </td>
-              <td className="px-5 py-3.5"><AdminStatusPill status={imageState.status}>{imageState.label}</AdminStatusPill></td>
-              <td className="px-5 py-3.5">
-                <div className="flex justify-end gap-2">
-                  <AdminButton variant="subtle" className="h-9 px-3 text-xs" onClick={() => setSelected(food)}>Mở</AdminButton>
-                  <AdminButton
-                    variant={excluded ? "success" : "danger"}
-                    className="h-9 px-3 text-xs"
-                    onClick={() => excluded ? restoreFood(food) : excludeFood(food)}
-                  >
-                    {excluded ? "Khôi phục" : "Loại khỏi thực đơn"}
-                  </AdminButton>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </AdminDataTable>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="inline-flex flex-col gap-1">
+                    <span className="text-base font-extrabold text-slate-900">{formatNumber(food.calories)} <span className="text-sm font-semibold text-slate-400">kcal</span></span>
+                    <span className="text-xs font-semibold text-slate-500">{formatNumber(food.protein)} <span className="text-slate-400">g</span> protein</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <AdminStatusPill status={excluded ? "error" : food.menu_eligible ? "valid" : "invalid"}>
+                    {excluded ? "Tắt gợi ý" : food.menu_eligible ? "Tất cả" : "Không gợi ý"}
+                  </AdminStatusPill>
+                </td>
+                <td className="px-6 py-4">
+                  <AdminStatusPill status={imageState.status}>{imageState.label}</AdminStatusPill>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(food)}
+                      className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95"
+                    >
+                      Chi tiết
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => excluded ? restoreFood(food) : excludeFood(food)}
+                      className={cx(
+                        "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-xs font-bold shadow-sm transition active:scale-95",
+                        excluded 
+                          ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          : "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                      )}
+                    >
+                      {excluded ? "Loại khỏi thực đơn" : "Loại khỏi thực đơn"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </AdminDataTable>
+      </div>
 
       <Pagination page={page} totalPages={totalPages} total={data.total} onPage={setPage} />
 
@@ -1835,62 +1893,135 @@ function RecommendationTestPage({ refreshKey }) {
   const meals = asArray(plan.meals);
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
-      <AdminSectionCard title="Hồ sơ test" description="Form gọn để nhập các trường chính của profile.">
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Giới tính"><SelectInput value={form.sex} onChange={(value) => update("sex", value)}><option value="male">Nam</option><option value="female">Nữ</option></SelectInput></FormField>
-            <FormField label="Tuổi"><input className="admin-input" type="number" value={form.age} onChange={(event) => update("age", event.target.value)} /></FormField>
-            <FormField label="Chiều cao (cm)"><input className="admin-input" type="number" value={form.height} onChange={(event) => update("height", event.target.value)} /></FormField>
-            <FormField label="Cân nặng (kg)"><input className="admin-input" type="number" value={form.weight} onChange={(event) => update("weight", event.target.value)} /></FormField>
-            <FormField label="Mục tiêu (kg)"><input className="admin-input" type="number" value={form.target_weight} onChange={(event) => update("target_weight", event.target.value)} /></FormField>
-            <FormField label="Số món mỗi bữa">
-              <SelectInput value={form.items_per_meal} onChange={(value) => update("items_per_meal", value)}>
+    <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+      {/* Compact Form Card - Wider */}
+      <div className="rounded-3xl border border-slate-200/60 bg-white p-4 shadow-sm shadow-slate-900/5">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm">
+            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-extrabold text-slate-900">Hồ sơ test</h3>
+            <p className="text-xs text-slate-500">Form gọn để nhập các trường chính của profile.</p>
+          </div>
+        </div>
+        
+        <div className="space-y-2.5">
+          {/* Compact 2-column grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Giới tính</label>
+              <select value={form.sex} onChange={(e) => update("sex", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option value="male">Nam</option>
+                <option value="female">Nữ</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Tuổi</label>
+              <input type="number" value={form.age} onChange={(e) => update("age", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Chiều cao (cm)</label>
+              <input type="number" value={form.height} onChange={(e) => update("height", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Cân nặng (kg)</label>
+              <input type="number" value={form.weight} onChange={(e) => update("weight", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Mục tiêu (kg)</label>
+              <input type="number" value={form.target_weight} onChange={(e) => update("target_weight", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Số món/bữa</label>
+              <select value={form.items_per_meal} onChange={(e) => update("items_per_meal", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                 <option value={3}>3 món</option>
                 <option value={4}>4 món</option>
                 <option value={5}>5 món</option>
-              </SelectInput>
-            </FormField>
-            <FormField label="Tốc độ tăng">
-              <div className="flex gap-2">
-                <input className="admin-input w-16 px-2 text-center" type="number" value={form.target_duration_value} onChange={(event) => update("target_duration_value", event.target.value)} />
-                <SelectInput className="flex-1" value={form.target_duration_unit} onChange={(value) => update("target_duration_unit", value)}>
-                  <option value="week">Tuần</option>
-                  <option value="month">Tháng</option>
-                  <option value="year">Năm</option>
-                </SelectInput>
-              </div>
-            </FormField>
+              </select>
+            </div>
           </div>
-          <FormField label="Mức vận động">
-            <SelectInput value={form.activity} onChange={(value) => update("activity", value)}>
+          
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700">Tốc độ tăng</label>
+            <div className="flex gap-2">
+              <input type="number" value={form.target_duration_value} onChange={(e) => update("target_duration_value", e.target.value)} className="h-9 w-16 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-center text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+              <select value={form.target_duration_unit} onChange={(e) => update("target_duration_unit", e.target.value)} className="h-9 flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option value="weeks">Tuần</option>
+                <option value="months">Tháng</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700">Mức vận động</label>
+            <select value={form.activity} onChange={(e) => update("activity", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
               <option value="sedentary">Ít vận động</option>
               <option value="light">Nhẹ</option>
               <option value="moderate">Vừa</option>
               <option value="active">Cao</option>
-            </SelectInput>
-          </FormField>
-          <FormField label="Chế độ ăn">
-            <SelectInput value={form.diet_type} onChange={(value) => update("diet_type", value)}>
-              <option value="balanced">Cân bằng</option>
-              <option value="vegetarian">Ăn chay</option>
-              <option value="high_protein">Giàu protein</option>
-            </SelectInput>
-          </FormField>
-          <FormField label="Ngân sách">
-            <SelectInput value={form.budget_level} onChange={(value) => update("budget_level", value)}>
-              <option value="standard">Tiêu chuẩn</option>
-              <option value="flexible">Linh hoạt</option>
-              <option value="saving">Tiết kiệm</option>
-            </SelectInput>
-          </FormField>
-          <FormField label="Món yêu thích"><input className="admin-input" value={form.favorite_foods} onChange={(event) => update("favorite_foods", event.target.value)} placeholder="VD: bò, gà, trứng" /></FormField>
-          <FormField label="Món loại trừ"><input className="admin-input" value={form.disliked_foods} onChange={(event) => update("disliked_foods", event.target.value)} placeholder="VD: tôm, mực" /></FormField>
-          <AdminButton icon="test" disabled={loading} onClick={runTest}>{loading ? "Đang kiểm tra" : "Chạy kiểm tra"}</AdminButton>
+            </select>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Chế độ ăn</label>
+              <select value={form.diet_type} onChange={(e) => update("diet_type", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option value="balanced">Cân bằng</option>
+                <option value="vegetarian">Ăn chay</option>
+                <option value="high_protein">Protein cao</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-700">Ngân sách</label>
+              <select value={form.budget_level} onChange={(e) => update("budget_level", e.target.value)} className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option value="standard">Tiêu chuẩn</option>
+                <option value="flexible">Linh hoạt</option>
+                <option value="saving">Tiết kiệm</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700">Món yêu thích</label>
+            <input value={form.favorite_foods} onChange={(e) => update("favorite_foods", e.target.value)} placeholder="VD: bò, gà, trứng" className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+          </div>
+          
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700">Món loại trừ</label>
+            <input value={form.disliked_foods} onChange={(e) => update("disliked_foods", e.target.value)} placeholder="VD: tôm, mực" className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+          </div>
+          
+          <button
+            type="button"
+            disabled={loading}
+            onClick={runTest}
+            className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-700 hover:to-blue-800 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Đang kiểm tra...
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Chạy kiểm tra
+              </>
+            )}
+          </button>
         </div>
-      </AdminSectionCard>
+      </div>
 
-      <div className="space-y-5">
+      {/* Results Column */}
+      <div className="space-y-4">
         {error ? <AdminEmptyState icon="errors" title="Không chạy được kiểm tra" description={error} /> : null}
         {!result && !loading && !error ? <AdminEmptyState icon="test" title="Chưa có kết quả" description="Nhập hồ sơ test rồi bấm chạy kiểm tra để xem thực đơn gợi ý." /> : null}
         {loading ? <AdminLoadingSkeleton cards={4} rows={4} /> : null}
@@ -2190,182 +2321,189 @@ function SystemErrorsPage({ refreshKey }) {
   );
 }
 
-function SettingsPage({ refreshKey }) {
-  const [data, setData] = useState({ items: [] });
+function FeedbackPage({ refreshKey }) {
+  const [data, setData] = useState({ items: [], total: 0, pending_count: 0 });
+  const [filters, setFilters] = useState({ status: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [adminNote, setAdminNote] = useState("");
+  const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
+  function loadFeedback() {
     setLoading(true);
-    adminGet("/food-categories/summary")
+    adminGet("/feedback", filters.status ? { status: filters.status, limit: 100 } : { limit: 100 })
       .then((response) => {
-        setData(response || { items: [] });
+        setData(response || { items: [], total: 0, pending_count: 0 });
         setError("");
       })
-      .catch((err) => setError(err.message || "Không thể tải nhóm món."))
+      .catch((err) => setError(err.message || "Không thể tải phản hồi."))
       .finally(() => setLoading(false));
-  }, [refreshKey]);
+  }
 
-  if (loading) return <AdminLoadingSkeleton rows={5} />;
+  useEffect(loadFeedback, [refreshKey, filters.status]);
+
+  function openFeedback(feedback) {
+    setSelected(feedback);
+    setAdminNote(feedback.admin_note || "");
+  }
+
+  async function updateStatus(newStatus) {
+    if (!selected?.id || updating) return;
+    setUpdating(true);
+    try {
+      await adminPatch(`/feedback/${selected.id}`, {
+        status: newStatus,
+        admin_note: adminNote.trim() || null,
+      });
+      setSelected(null);
+      setAdminNote("");
+      loadFeedback();
+    } catch (err) {
+      setError(err.message || "Không thể cập nhật phản hồi.");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  if (loading) return <AdminLoadingSkeleton rows={6} />;
+
+  const feedbackItems = asArray(data.items);
+  const pendingCount = data.pending_count || 0;
+  const resolvedCount = feedbackItems.filter((item) => item.status === "resolved").length;
+  const typeCounts = feedbackItems.reduce((acc, item) => {
+    acc[item.type] = (acc[item.type] || 0) + 1;
+    return acc;
+  }, {});
+  const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const chips = [
+    { value: "", label: "Tất cả" },
+    { value: "pending", label: "Chờ xử lý" },
+    { value: "in_review", label: "Đang xem xét" },
+    { value: "resolved", label: "Đã giải quyết" },
+    { value: "dismissed", label: "Đã bỏ qua" },
+  ];
+
   return (
     <div className="space-y-5">
-      {error ? <AdminEmptyState icon="errors" title="Không tải được cài đặt" description={error} /> : null}
-      
-      {/* Food Categories */}
-      <AdminSectionCard title="Nhóm món" description="Tổng hợp số lượng món ăn theo nhóm chuẩn đang được backend sử dụng.">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {asArray(data.items).map((item) => (
-            <div key={item.category} className="rounded-2xl bg-slate-50 p-4">
-              <p className="truncate text-sm font-bold text-[#081832]">{CATEGORY_MAP[item.category] || item.category}</p>
-              <p className="mt-2 text-2xl font-extrabold text-blue-600">{formatNumber(item.count)}</p>
-            </div>
-          ))}
-        </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <AdminStatCard label="Chờ xử lý" value={formatNumber(pendingCount)} helper="Phản hồi mới" icon="message" tone={pendingCount ? "amber" : "emerald"} />
+        <AdminStatCard label="Đã giải quyết" value={formatNumber(resolvedCount)} helper="Trong danh sách hiện tại" icon="check" tone="emerald" />
+        <AdminStatCard label="Loại phổ biến" value={topType ? getStatusLabel(topType[0]) : "-"} helper={topType ? `${formatNumber(topType[1])} phản hồi` : "Chưa có dữ liệu"} icon="overview" tone="blue" />
+      </div>
+
+      <AdminSectionCard>
+        <AdminFilterChips items={chips} value={filters.status} onChange={(status) => setFilters({ ...filters, status })} />
       </AdminSectionCard>
 
-      {/* Email Configuration */}
-      <AdminSectionCard title="Cấu hình Email" description="Quản lý email tự động gửi cho người dùng.">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4">
-            <div className="flex-1">
-              <p className="text-sm font-bold text-[#081832]">Email chào mừng</p>
-              <p className="mt-1 text-xs text-slate-500">Gửi email khi người dùng đăng ký mới</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-emerald-600">Đang bật</span>
-              <AdminButton variant="subtle" size="sm">Chỉnh sửa</AdminButton>
-            </div>
-          </div>
-          <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4">
-            <div className="flex-1">
-              <p className="text-sm font-bold text-[#081832]">Email nhắc nh</p>
-              <p className="mt-1 text-xs text-slate-500">Nhắc người dùng về bữa ăn và mục tiêu</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-emerald-600">Đang bật</span>
-              <AdminButton variant="subtle" size="sm">Chỉnh sửa</AdminButton>
-            </div>
-          </div>
-          <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4">
-            <div className="flex-1">
-              <p className="text-sm font-bold text-[#081832]">Báo cáo tuần</p>
-              <p className="mt-1 text-xs text-slate-500">Gửi báo cáo tiến độ hàng tuần</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-400">Đang tắt</span>
-              <AdminButton variant="subtle" size="sm">Chỉnh sửa</AdminButton>
-            </div>
-          </div>
-        </div>
-      </AdminSectionCard>
+      {error ? <AdminEmptyState icon="errors" title="Không tải được phản hồi" description={error} /> : null}
 
-      {/* SMS Configuration */}
-      <AdminSectionCard title="Cấu hình SMS" description="Quản lý gửi SMS thông báo quan trọng.">
-        <div className="grid gap-4 md:grid-cols-2">
-          <MiniInfo label="SMS Provider" value="Twilio" />
-          <MiniInfo label="SMS đã gửi hôm nay" value="127 tin" />
-          <MiniInfo label="Giới hạn hàng ngày" value="1,000 tin" />
-          <MiniInfo label="Số dư còn lại" value="$45.50" />
-        </div>
-        <div className="mt-4 flex gap-2">
-          <AdminButton variant="primary">Gửi SMS test</AdminButton>
-          <AdminButton variant="subtle">Xem lịch sử</AdminButton>
-        </div>
-      </AdminSectionCard>
+      <AdminDataTable
+        columns={[
+          { key: "created", label: "Thời gian" },
+          { key: "user", label: "Người dùng" },
+          { key: "type", label: "Loại" },
+          { key: "item", label: "Vị trí/Món" },
+          { key: "status", label: "Trạng thái" },
+          { key: "actions", label: "Hành động", align: "right" },
+        ]}
+        empty={<AdminEmptyState icon="message" title="Không có phản hồi" description="Chưa có phản hồi nào từ người dùng." />}
+        minWidth="900px"
+      >
+        {feedbackItems.map((feedback) => (
+          <tr key={feedback.id} className="h-16 transition hover:bg-slate-50">
+            <td className="px-5 py-3.5 text-sm text-slate-500">{formatDate(feedback.created_at)}</td>
+            <td className="max-w-[220px] px-5 py-3.5">
+              <p className="truncate text-sm font-bold text-[#081832]" title={feedback.user_name || feedback.user_email}>
+                {feedback.user_name || "Người dùng"}
+              </p>
+              <p className="truncate text-xs text-slate-500" title={feedback.user_email}>{feedback.user_email}</p>
+            </td>
+            <td className="px-5 py-3.5">
+              <AdminBadge tone="blue">{getStatusLabel(feedback.type)}</AdminBadge>
+            </td>
+            <td className="max-w-[200px] px-5 py-3.5">
+              <p className="truncate text-sm text-slate-600" title={feedback.item}>{feedback.item || "-"}</p>
+            </td>
+            <td className="px-5 py-3.5">
+              <AdminStatusPill status={feedback.status}>{getStatusLabel(feedback.status)}</AdminStatusPill>
+            </td>
+            <td className="px-5 py-3.5 text-right">
+              <AdminButton variant="subtle" className="h-9 px-3 text-xs" onClick={() => openFeedback(feedback)}>
+                Xem
+              </AdminButton>
+            </td>
+          </tr>
+        ))}
+      </AdminDataTable>
 
-      {/* Backup Management */}
-      <AdminSectionCard title="Quản lý Backup" description="Sao lưu và khôi phục dữ liệu hệ thống.">
-        <div className="space-y-3">
-          <MiniLine label="Backup gần nhất" value="16/06/2026 02:00 AM" />
-          <MiniLine label="Tần suất tự động" value="Hàng ngày lúc 2:00 AM" />
-          <MiniLine label="Thư mục lưu trữ" value="/backups/database/" />
-          <MiniLine label="Lưu giữ" value="30 ngày" />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <AdminButton variant="primary">Backup ngay</AdminButton>
-          <AdminButton variant="subtle">Xem lịch sử backup</AdminButton>
-          <AdminButton variant="subtle">Khôi phục từ backup</AdminButton>
-        </div>
-      </AdminSectionCard>
+      <AdminDrawer
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        title="Chi tiết phản hồi"
+        subtitle={`${selected?.user_name || "Người dùng"} • ${formatDate(selected?.created_at)}`}
+        footer={
+          <div className="flex gap-2">
+            <AdminButton variant="subtle" className="flex-1" onClick={() => setSelected(null)}>Đóng</AdminButton>
+            {selected?.status !== "dismissed" && (
+              <AdminButton
+                variant="danger"
+                className="flex-1"
+                onClick={() => updateStatus("dismissed")}
+                disabled={updating}
+              >
+                Bỏ qua
+              </AdminButton>
+            )}
+            {selected?.status !== "resolved" && (
+              <AdminButton
+                className="flex-1"
+                icon="check"
+                onClick={() => updateStatus("resolved")}
+                disabled={updating}
+              >
+                Giải quyết
+              </AdminButton>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <MiniInfo label="Loại vấn đề" value={<AdminBadge tone="blue">{getStatusLabel(selected?.type)}</AdminBadge>} />
+            <MiniInfo label="Trạng thái" value={<AdminStatusPill status={selected?.status}>{getStatusLabel(selected?.status)}</AdminStatusPill>} />
+          </div>
 
-      {/* Storage Management */}
-      <AdminSectionCard title="Quản lý dung lượng" description="Theo dõi và quản lý không gian lưu trữ.">
-        <div className="space-y-3">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-[#081832]">Tổng dung lượng</span>
-              <span className="text-2xl font-extrabold text-blue-600">100 GB</span>
-            </div>
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full w-[45%] rounded-full bg-blue-600"></div>
-            </div>
-            <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="text-slate-500">Đã sử dụng: 45.2 GB</span>
-              <span className="font-semibold text-slate-600">45%</span>
-            </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <MiniInfo label="Ảnh món ăn" value="12.3 GB" />
-            <MiniInfo label="File người dùng" value="8.9 GB" />
-            <MiniInfo label="Database" value="15.6 GB" />
-            <MiniInfo label="Logs" value="8.4 GB" />
-          </div>
-        </div>
-        <div className="mt-4">
-          <AdminButton variant="primary">Dọn dẹp file cũ</AdminButton>
-        </div>
-      </AdminSectionCard>
+          <MiniLine label="Người gửi" value={selected?.user_name || selected?.user_email || "-"} />
+          <MiniLine label="Email" value={selected?.user_email || "-"} />
+          <MiniLine label="Vị trí/Món ăn" value={selected?.item || "-"} />
 
-      {/* System Configuration */}
-      <AdminSectionCard title="Cấu hình hệ thống" description="Các thiết lập kỹ thuật của hệ thống.">
-        <div className="grid gap-3 md:grid-cols-2">
-          <MiniLine label="Session Timeout" value="7 ngày" />
-          <MiniLine label="API Rate Limit" value="100 req/phút" />
-          <MiniLine label="Max Upload Size" value="10 MB" />
-          <MiniLine label="Database Pool Size" value="20 connections" />
-        </div>
-        <div className="mt-4">
-          <AdminButton variant="primary">Cập nhật cấu hình</AdminButton>
-        </div>
-      </AdminSectionCard>
+          <AdminSectionCard title="Mô tả chi tiết">
+            <p className="whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+              {selected?.description || "Không có mô tả."}
+            </p>
+          </AdminSectionCard>
 
-      {/* Maintenance Tools */}
-      <AdminSectionCard title="Công cụ bảo trì" description="Các công cụ tối ưu hóa và bảo trì hệ thống.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-center">
-            <div className="mb-2 text-2xl">🧹</div>
-            <p className="text-sm font-bold text-[#081832]">Xóa Cache</p>
-            <AdminButton variant="subtle" size="sm" className="mt-3 w-full">Thực hiện</AdminButton>
-          </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-center">
-            <div className="mb-2 text-2xl">⚡</div>
-            <p className="text-sm font-bold text-[#081832]">Tối ưu DB</p>
-            <AdminButton variant="subtle" size="sm" className="mt-3 w-full">Thực hiện</AdminButton>
-          </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-center">
-            <div className="mb-2 text-2xl">📋</div>
-            <p className="text-sm font-bold text-[#081832]">Dọn Logs</p>
-            <AdminButton variant="subtle" size="sm" className="mt-3 w-full">Thực hiện</AdminButton>
-          </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-center">
-            <div className="mb-2 text-2xl">🔄</div>
-            <p className="text-sm font-bold text-[#081832]">Rebuild Index</p>
-            <AdminButton variant="subtle" size="sm" className="mt-3 w-full">Thực hiện</AdminButton>
-          </div>
-        </div>
-      </AdminSectionCard>
+          <AdminSectionCard title="Ghi chú của admin">
+            <textarea
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+              className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              placeholder="Thêm ghi chú nội bộ về cách xử lý..."
+            />
+          </AdminSectionCard>
 
-      {/* Operating Notes */}
-      <AdminSectionCard title="Ghi chú vận hành" description="Các cài đặt backend, auth, recommender và pipeline ảnh không được thay đổi trong redesign này.">
-        <div className="grid gap-3 md:grid-cols-3">
-          <MiniInfo label="API admin" value="Giữ nguyên" />
-          <MiniInfo label="Recommender" value="Không sửa" />
-          <MiniInfo label="Ảnh món ăn" value="Chỉ đổi UI" />
+          {selected?.resolved_at && (
+            <MiniLine label="Đã xử lý" value={formatDate(selected.resolved_at)} />
+          )}
         </div>
-      </AdminSectionCard>
+      </AdminDrawer>
     </div>
   );
 }
+
+
 
 function MessageList({ title, items, tone }) {
   const toneClass = tone === "blue" ? "bg-blue-50 text-blue-800" : "bg-amber-50 text-amber-800";
@@ -2480,8 +2618,8 @@ function AdminShell({ user, onLogout }) {
     if (activeKey === "food-images") return <FoodImagesPage {...props} />;
     if (activeKey === "recommendation-test") return <RecommendationTestPage {...props} />;
     if (activeKey === "meal-plans") return <MealPlansPage {...props} />;
+    if (activeKey === "feedback") return <FeedbackPage {...props} />;
     if (activeKey === "system-errors") return <SystemErrorsPage {...props} />;
-    if (activeKey === "settings") return <SettingsPage {...props} />;
     return <OverviewPage {...props} />;
   }, [activeKey, refreshKey]);
 

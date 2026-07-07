@@ -683,24 +683,24 @@ export default function App() {
     );
   }
 
-  if (appView === "admin") {
-    return <AdminView user={authUser} onLogout={handleLogout} />;
-  }
-
   return (
     <>
-      <DashboardView
-        userEmail={userEmail}
-        user={authUser}
-        onLogout={handleLogout}
-        initialFormState={profileFormState}
-        initialResult={initialMealResult}
-        initialSection={locationPath === "/health-education" ? "health-education" : locationPath === "/thanh-tich" ? "thanh-tich" : initialSection}
-        onRequireProfile={handleRequireProfile}
-        onEditProfile={() => setAppView("onboarding")}
-        onProfileUpdate={handleProfileUpdate}
-        onNavigatePath={navigateTo}
-      />
+      {appView === "admin" ? (
+        <AdminView user={authUser} onLogout={handleLogout} />
+      ) : (
+        <DashboardView
+          userEmail={userEmail}
+          user={authUser}
+          onLogout={handleLogout}
+          initialFormState={profileFormState}
+          initialResult={initialMealResult}
+          initialSection={locationPath === "/health-education" ? "health-education" : locationPath === "/thanh-tich" ? "thanh-tich" : initialSection}
+          onRequireProfile={handleRequireProfile}
+          onEditProfile={() => setAppView("onboarding")}
+          onProfileUpdate={handleProfileUpdate}
+          onNavigatePath={navigateTo}
+        />
+      )}
       
       {showLogoutConfirm && (
         <LogoutConfirmModal

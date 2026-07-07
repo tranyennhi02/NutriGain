@@ -462,39 +462,86 @@ export async function exportNutritionReportPdf(data) {
 
     // === HEADER - NUTRIGAIN BRANDING ===
     doc.setFillColor(...NUTRIGAIN_GREEN);
-    safeRect(doc, 0, 0, pageWidth, 80, "F");
+    safeRect(doc, 0, 0, pageWidth, 100, "F");
     
-    doc.setFontSize(24);
-    doc.setFont("Roboto", "normal");
+    // Logo area (left side)
+    doc.setFontSize(28);
+    doc.setFont("Roboto", "bold");
     doc.setTextColor(255, 255, 255);
-    safeText(doc, "NUTRIGAIN", pageWidth / 2, 35, { align: "center" });
+    safeText(doc, "🥗 NUTRIGAIN", margin, 35);
     
-    doc.setFontSize(14);
+    doc.setFontSize(10);
     doc.setFont("Roboto", "normal");
-    safeText(doc, "BÁO CÁO DINH DƯỠNG HẰNG NGÀY", pageWidth / 2, 58, { align: "center" });
+    safeText(doc, "Hệ thống Dinh dưỡng Thông minh", margin, 55);
+    
+    // Report info (right side)
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    const reportDate = formatDate(new Date());
+    const reportCode = `NG-${new Date().getTime().toString().slice(-8)}`;
+    safeText(doc, `📅 Ngày: ${reportDate}`, pageWidth - margin, 30, { align: "right" });
+    safeText(doc, `👤 Người dùng: ${userEmail || "N/A"}`, pageWidth - margin, 45, { align: "right" });
+    safeText(doc, `#️⃣ Mã báo cáo: ${reportCode}`, pageWidth - margin, 60, { align: "right" });
+    
+    // Title
+    doc.setFontSize(16);
+    doc.setFont("Roboto", "bold");
+    doc.setTextColor(255, 255, 255);
+    safeText(doc, "BÁO CÁO DINH DƯỠNG HẰNG NGÀY", pageWidth / 2, 85, { align: "center" });
 
-    yPos = 100;
-
-    // Date
-    const today = new Date();
-    const dateStr = formatDate(today);
-    doc.setFontSize(11);
+    yPos = 120;
+    
+    // === EXECUTIVE SUMMARY ===
+    doc.setFillColor(240, 249, 255); // Light blue background
+    safeRoundedRect(doc, margin, yPos, contentWidth, 70, 6, 6, "F");
+    doc.setDrawColor(191, 219, 254);
+    doc.setLineWidth(1);
+    safeRoundedRect(doc, margin, yPos, contentWidth, 70, 6, 6, "S");
+    
+    doc.setFontSize(12);
+    doc.setFont("Roboto", "bold");
+    doc.setTextColor(59, 130, 246); // Blue
+    safeText(doc, "📌 TÓM TẮT NHANH", margin + 10, yPos + 18);
+    
+    // Calculate summary data first
+    const targetCal = summary?.targetCalories || nutritionTarget?.targetCalories || 0;
+    const eatenCal = validation?.totalCalories || consumedNutrition?.calories || 0;
+    const progress = targetCal > 0 ? Math.round((eatenCal / targetCal) * 100) : 0;
+    
+    doc.setFontSize(10);
     doc.setFont("Roboto", "normal");
-    doc.setTextColor(100, 100, 100);
-    safeText(doc, `Ngày báo cáo: ${dateStr}`, pageWidth / 2, yPos, { align: "center" });
-
-    yPos += 30;
+    doc.setTextColor(0, 0, 0);
+    
+    let summaryText = `Hôm nay bạn đã tiêu thụ ${formatNumber(eatenCal)} kcal / ${formatNumber(targetCal)} kcal mục tiêu (${progress}%). `;
+    if (progress >= 95 && progress <= 105) {
+      summaryText += "✓ Chế độ ăn đạt chuẩn tốt!";
+    } else if (progress < 85) {
+      summaryText += `⚠️ Cần bổ sung thêm ${formatNumber(targetCal - eatenCal)} kcal.`;
+    } else if (progress > 110) {
+      summaryText += "⚠️ Đã vượt mức, cần điều chỉnh các bữa sau.";
+    } else {
+      summaryText += "→ Đang trên đà đạt mục tiêu!";
+    }
+    
+    const summaryLines = doc.splitTextToSize(summaryText, contentWidth - 30);
+    let summaryY = yPos + 38;
+    summaryLines.forEach((line) => {
+      safeText(doc, line, margin + 10, summaryY);
+      summaryY += 14;
+    });
+    
+    yPos += 90;
 
     // === PHẦN 1: THÔNG TIN NGƯỜI DÙNG ===
     doc.setFontSize(13);
     doc.setFont("Roboto", "bold");
     doc.setTextColor(...NUTRIGAIN_GREEN);
-    safeText(doc, "PHẦN 1. THÔNG TIN NGƯỜI DÙNG", margin, yPos);
+    safeText(doc, "PHẦN 1. THÔNG TIN NGƯỜI DÙNG 👤", margin, yPos);
     
     // Green underline
     doc.setDrawColor(...NUTRIGAIN_GREEN);
     doc.setLineWidth(2);
-    safeLine(doc, margin, yPos + 3, margin + 190, yPos + 3);
+    safeLine(doc, margin, yPos + 3, margin + 240, yPos + 3);
     
     yPos += 20;
 
@@ -502,34 +549,91 @@ export async function exportNutritionReportPdf(data) {
     doc.setFont("Roboto", "normal");
     doc.setTextColor(0, 0, 0);
 
-    const userName = profileSettings?.full_name || userEmail || "Chưa có dữ liệu";
+    const userName = profileSettings?.full_name || "Chưa có dữ liệu";
     const age = profileSettings?.age ? String(profileSettings.age) : "Chưa có dữ liệu";
     const gender = profileSettings?.sex === "male" ? "Nam" : profileSettings?.sex === "female" ? "Nữ" : "Khác";
     const height = profileSettings?.height || profileSettings?.height_cm ? formatNumber(profileSettings.height || profileSettings.height_cm) + " cm" : "Chưa có dữ liệu";
     const currentWeight = profileSettings?.weight || profileSettings?.weight_kg ? formatNumber(profileSettings.weight || profileSettings.weight_kg) + " kg" : "Chưa có dữ liệu";
     const targetWeight = profileSettings?.target_weight || profileSettings?.target_weight_kg ? formatNumber(profileSettings.target_weight || profileSettings.target_weight_kg) + " kg" : "Chưa có dữ liệu";
     const bmi = summary?.bmi ? formatDecimal(summary.bmi, 1) : "Chưa có dữ liệu";
+    
+    // BMI assessment with indicator
+    let bmiStatus = "";
+    let bmiIndicator = "";
+    if (summary?.bmi) {
+      if (summary.bmi < 18.5) {
+        bmiStatus = "Thiếu cân";
+        bmiIndicator = "⚠️";
+      } else if (summary.bmi >= 18.5 && summary.bmi < 25) {
+        bmiStatus = "Bình thường";
+        bmiIndicator = "✓";
+      } else if (summary.bmi >= 25 && summary.bmi < 30) {
+        bmiStatus = "Thừa cân";
+        bmiIndicator = "⚠️";
+      } else {
+        bmiStatus = "Béo phì";
+        bmiIndicator = "⚠️";
+      }
+    }
 
-    // Table with user info
-    const userInfoData = [
-      ["Email", userName],
-      ["Tuổi", age],
-      ["Giới tính", gender],
-      ["Chiều cao", height],
-      ["Cân nặng hiện tại", currentWeight],
-      ["Cân nặng mục tiêu", targetWeight],
-      ["BMI", bmi],
+    // User info card with 2-column layout
+    const cardPadding = 12;
+    const cardHeight = 110;
+    
+    // Draw rounded card background
+    doc.setFillColor(248, 250, 252); // Light blue-gray
+    safeRoundedRect(doc, margin, yPos, contentWidth, cardHeight, 6, 6, "F");
+    
+    // Draw border
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(1);
+    safeRoundedRect(doc, margin, yPos, contentWidth, cardHeight, 6, 6, "S");
+    
+    // Column positions
+    const col1X = margin + cardPadding;
+    const col2X = margin + contentWidth / 2 + cardPadding;
+    const labelWidth = 110;
+    let cardY = yPos + cardPadding + 12;
+    
+    doc.setFontSize(10);
+    
+    // Left column
+    const leftData = [
+      ["👤 Họ tên", userName !== "Chưa có dữ liệu" ? userName : (userEmail || "Chưa có dữ liệu")],
+      ["🎂 Tuổi", age],
+      ["⚧ Giới tính", gender],
+      ["📏 Chiều cao", height],
     ];
-
-    userInfoData.forEach(([label, value]) => {
+    
+    leftData.forEach(([label, value]) => {
       doc.setFont("Roboto", "normal");
-      safeText(doc, label + ":", margin + 5, yPos);
+      doc.setTextColor(71, 85, 105);
+      safeText(doc, label, col1X, cardY);
       doc.setFont("Roboto", "bold");
-      safeText(doc, value, margin + 150, yPos);
-      yPos += 16;
+      doc.setTextColor(0, 0, 0);
+      safeText(doc, value, col1X + labelWidth, cardY);
+      cardY += 18;
     });
-
-    yPos += 10;
+    
+    // Right column
+    cardY = yPos + cardPadding + 12;
+    const rightData = [
+      ["⚖️ Cân nặng hiện tại", currentWeight],
+      ["🎯 Cân nặng mục tiêu", targetWeight],
+      ["📊 BMI", bmi + (bmiStatus ? ` ${bmiIndicator} ${bmiStatus}` : "")],
+    ];
+    
+    rightData.forEach(([label, value]) => {
+      doc.setFont("Roboto", "normal");
+      doc.setTextColor(71, 85, 105);
+      safeText(doc, label, col2X, cardY);
+      doc.setFont("Roboto", "bold");
+      doc.setTextColor(0, 0, 0);
+      safeText(doc, value, col2X + labelWidth, cardY);
+      cardY += 18;
+    });
+    
+    yPos += cardHeight + 20;
 
     // === PHẦN 2: TỔNG QUAN DINH DƯỠNG ===
     if (yPos + 100 > pageHeight - margin - 50) {
@@ -540,32 +644,42 @@ export async function exportNutritionReportPdf(data) {
     doc.setFontSize(13);
     doc.setFont("Roboto", "bold");
     doc.setTextColor(...NUTRIGAIN_GREEN);
-    safeText(doc, "PHẦN 2. TỔNG QUAN DINH DƯỠNG", margin, yPos);
+    safeText(doc, "PHẦN 2. TỔNG QUAN DINH DƯỠNG 📊", margin, yPos);
     
     doc.setDrawColor(...NUTRIGAIN_GREEN);
     doc.setLineWidth(2);
-    safeLine(doc, margin, yPos + 3, margin + 210, yPos + 3);
+    safeLine(doc, margin, yPos + 3, margin + 250, yPos + 3);
     
     yPos += 20;
 
-    const targetCal = summary?.targetCalories || nutritionTarget?.targetCalories || 0;
-    const eatenCal = validation?.totalCalories || consumedNutrition?.calories || 0;
     const remainingCal = Math.max(0, targetCal - eatenCal);
-    const progress = targetCal > 0 ? Math.round((eatenCal / targetCal) * 100) : 0;
     const bmr = summary?.bmr || 0;
     const tdee = summary?.tdee || 0;
+    
+    // Helper function to get color based on progress
+    const getProgressColor = (current, target) => {
+      if (!target || target === 0) return [100, 100, 100];
+      const percent = (current / target) * 100;
+      if (percent >= 95 && percent <= 105) return [76, 175, 80]; // Green - good
+      if (percent < 85) return [245, 158, 11]; // Orange - warning
+      if (percent > 110) return [239, 68, 68]; // Red - exceeded
+      return [59, 130, 246]; // Blue - on track
+    };
+    
+    const calColor = getProgressColor(eatenCal, targetCal);
+    const progressColor = progress >= 95 && progress <= 105 ? "✓" : progress < 85 ? "⚠️" : progress > 110 ? "❌" : "→";
 
-    // Use autoTable for better formatting
+    // Use autoTable with custom cell coloring
     autoTable(doc, {
       startY: yPos,
       head: [["Chỉ số", "Giá trị", "Đơn vị", "Ghi chú"]],
       body: [
-        ["BMR", formatNumber(bmr), "kcal", "Năng lượng trao đổi cơ bản"],
-        ["TDEE", formatNumber(tdee), "kcal", "Năng lượng duy trì ước tính"],
-        ["Mục tiêu năng lượng", formatNumber(targetCal), "kcal/ngày", ""],
-        ["Đã tiêu thụ", formatNumber(eatenCal), "kcal", ""],
-        ["Còn lại", formatNumber(remainingCal), "kcal", ""],
-        ["Tiến độ hoàn thành", String(progress) + "%", "", ""],
+        ["📊 BMR", formatNumber(bmr), "kcal", "Năng lượng trao đổi cơ bản"],
+        ["🔥 TDEE", formatNumber(tdee), "kcal", "Năng lượng duy trì ước tính"],
+        ["🎯 Mục tiêu năng lượng", formatNumber(targetCal), "kcal/ngày", ""],
+        ["🍽️ Đã tiêu thụ", formatNumber(eatenCal), "kcal", ""],
+        ["⏳ Còn lại", formatNumber(remainingCal), "kcal", ""],
+        [progressColor + " Tiến độ hoàn thành", String(progress) + "%", "", ""],
       ],
       styles: {
         font: "Roboto",
@@ -590,6 +704,24 @@ export async function exportNutritionReportPdf(data) {
       alternateRowStyles: {
         fillColor: [250, 250, 250],
       },
+      didParseCell: function(data) {
+        // Color code the "Đã tiêu thụ" row
+        if (data.row.index === 3 && data.column.index === 1) {
+          data.cell.styles.textColor = calColor;
+        }
+        // Color code progress percentage
+        if (data.row.index === 5 && data.column.index === 1) {
+          if (progress >= 95 && progress <= 105) {
+            data.cell.styles.textColor = [76, 175, 80]; // Green
+          } else if (progress < 85) {
+            data.cell.styles.textColor = [245, 158, 11]; // Orange
+          } else if (progress > 110) {
+            data.cell.styles.textColor = [239, 68, 68]; // Red
+          } else {
+            data.cell.styles.textColor = [59, 130, 246]; // Blue
+          }
+        }
+      },
       margin: { left: margin },
     });
 
@@ -604,13 +736,13 @@ export async function exportNutritionReportPdf(data) {
     doc.setFontSize(13);
     doc.setFont("Roboto", "bold");
     doc.setTextColor(...NUTRIGAIN_GREEN);
-    safeText(doc, "PHẦN 3. PHÂN BỐ DINH DƯỠNG", margin, yPos);
+    safeText(doc, "PHẦN 3. PHÂN BỐ DINH DƯỠNG 🥗", margin, yPos);
     
     doc.setDrawColor(...NUTRIGAIN_GREEN);
     doc.setLineWidth(2);
-    safeLine(doc, margin, yPos + 3, margin + 200, yPos + 3);
+    safeLine(doc, margin, yPos + 3, margin + 240, yPos + 3);
     
-    yPos += 20;
+    yPos += 25;
 
     const protein = validation?.totalProtein || consumedNutrition?.protein || 0;
     const carbs = consumedNutrition?.carbs || validation?.totalCarbs || 0;
@@ -619,15 +751,125 @@ export async function exportNutritionReportPdf(data) {
     const targetProtein = nutritionTarget?.protein || summary?.proteinTarget || 0;
     const targetCarbs = nutritionTarget?.carbs || summary?.carbsTarget || 0;
     const targetFat = nutritionTarget?.fat || summary?.fatTarget || 0;
+    
+    // Draw progress bars for each nutrient
+    const drawProgressBar = (label, current, target, yPosition, color) => {
+      const barWidth = contentWidth - 20;
+      const barHeight = 12;
+      const barX = margin + 10;
+      
+      // Label
+      doc.setFontSize(10);
+      doc.setFont("Roboto", "bold");
+      doc.setTextColor(0, 0, 0);
+      safeText(doc, label, barX, yPosition);
+      
+      // Values
+      const valueText = `${formatNumber(current)}g / ${target > 0 ? formatNumber(target) + 'g' : '-'}`;
+      safeText(doc, valueText, barX + barWidth - 10, yPosition, { align: "right" });
+      
+      yPosition += 6;
+      
+      // Background bar
+      doc.setFillColor(240, 240, 240);
+      safeRoundedRect(doc, barX, yPosition, barWidth, barHeight, 6, 6, "F");
+      
+      // Progress bar
+      if (target > 0) {
+        const progress = Math.min((current / target), 1);
+        const progressWidth = barWidth * progress;
+        doc.setFillColor(...color);
+        if (progressWidth > 0) {
+          safeRoundedRect(doc, barX, yPosition, progressWidth, barHeight, 6, 6, "F");
+        }
+        
+        // Percentage text inside bar
+        const percent = Math.round((current / target) * 100);
+        doc.setFontSize(8);
+        doc.setFont("Roboto", "bold");
+        doc.setTextColor(255, 255, 255);
+        if (progressWidth > 30) {
+          safeText(doc, `${percent}%`, barX + progressWidth / 2, yPosition + 8.5, { align: "center" });
+        }
+      }
+      
+      return yPosition + barHeight + 18;
+    };
+    
+    yPos = drawProgressBar("🥩 Protein", protein, targetProtein, yPos, [239, 68, 68]); // Red
+    yPos = drawProgressBar("🍚 Carbohydrate", carbs, targetCarbs, yPos, [59, 130, 246]); // Blue
+    yPos = drawProgressBar("🧈 Chất béo", fat, targetFat, yPos, [245, 158, 11]); // Orange
+    
+    yPos += 5;
+
+    // === PHẦN 4: NHẬT KÝ BỮA ĂN ===
+    if (yPos + 100 > pageHeight - margin - 50) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    doc.setFontSize(13);
+    doc.setFont("Roboto", "bold");
+    doc.setTextColor(...NUTRIGAIN_GREEN);
+    safeText(doc, "PHẦN 4. NHẬT KÝ BỮA ĂN 🍽️", margin, yPos);
+    
+    doc.setDrawColor(...NUTRIGAIN_GREEN);
+    doc.setLineWidth(2);
+    safeLine(doc, margin, yPos + 3, margin + 180, yPos + 3);
+    
+    yPos += 20;
+
+    const mealLabels = {
+      breakfast: "🌅 Bữa sáng",
+      lunch: "☀️ Bữa trưa",
+      dinner: "🌙 Bữa tối",
+      snacks: "🍎 Bữa phụ",
+    };
+    
+    // Summary approach: count eaten vs not eaten per meal
+    const mealSummary = [];
+    
+    if (meals && meals.length > 0) {
+      meals.forEach((meal) => {
+        const mealName = mealLabels[meal.meal_type] || meal.title || "Bữa ăn";
+        const items = meal.items || [];
+        
+        let totalItems = items.length;
+        let eatenCount = 0;
+        let totalKcal = 0;
+        let totalProtein = 0;
+
+        items.forEach((item) => {
+          const entry = getMealLogEntry(mealLog, meal, item);
+          const isEaten = isFoodMarkedEaten(item, entry);
+          if (isEaten) {
+            eatenCount++;
+            totalKcal += item.calories || item.kcal || 0;
+            totalProtein += item.protein || item.protein_g || 0;
+          }
+        });
+        
+        const statusText = `${eatenCount}/${totalItems} món`;
+        const statusIndicator = eatenCount === totalItems ? "✓" : eatenCount > 0 ? "→" : "○";
+        
+        mealSummary.push([
+          mealName,
+          `${totalItems} món`,
+          statusIndicator + " " + statusText,
+          formatNumber(totalKcal),
+          formatNumber(totalProtein),
+        ]);
+      });
+    }
+
+    if (mealSummary.length === 0) {
+      mealSummary.push(["Chưa có dữ liệu", "-", "-", "-", "-"]);
+    }
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Thành phần", "Đã tiêu thụ", "Mục tiêu", "Đơn vị"]],
-      body: [
-        ["Protein", formatNumber(protein), targetProtein > 0 ? formatNumber(targetProtein) : "-", "g"],
-        ["Carbohydrate", formatNumber(carbs), targetCarbs > 0 ? formatNumber(targetCarbs) : "-", "g"],
-        ["Chất béo", formatNumber(fat), targetFat > 0 ? formatNumber(targetFat) : "-", "g"],
-      ],
+      head: [["Bữa ăn", "Tổng món", "Trạng thái", "Kcal đã ăn", "Protein (g)"]],
+      body: mealSummary,
       styles: {
         font: "Roboto",
         fontSize: 9,
@@ -643,99 +885,28 @@ export async function exportNutritionReportPdf(data) {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 140, fontStyle: "bold" },
-        1: { cellWidth: 120, halign: "right", fontStyle: "bold" },
-        2: { cellWidth: 120, halign: "right" },
-        3: { cellWidth: 135, halign: "center" },
+        0: { cellWidth: 110, fontStyle: "bold" },
+        1: { cellWidth: 90, halign: "center" },
+        2: { cellWidth: 115, halign: "center" },
+        3: { cellWidth: 100, halign: "right", fontStyle: "bold" },
+        4: { cellWidth: 100, halign: "right" },
       },
       alternateRowStyles: {
         fillColor: [250, 250, 250],
       },
-      margin: { left: margin },
-    });
-
-    yPos = doc.lastAutoTable.finalY + 20;
-
-    // === PHẦN 4: NHẬT KÝ BỮA ĂN ===
-    if (yPos + 100 > pageHeight - margin - 50) {
-      doc.addPage();
-      yPos = margin;
-    }
-
-    doc.setFontSize(13);
-    doc.setFont("Roboto", "bold");
-    doc.setTextColor(...NUTRIGAIN_GREEN);
-    safeText(doc, "PHẦN 4. NHẬT KÝ BỮA ĂN", margin, yPos);
-    
-    doc.setDrawColor(...NUTRIGAIN_GREEN);
-    doc.setLineWidth(2);
-    safeLine(doc, margin, yPos + 3, margin + 150, yPos + 3);
-    
-    yPos += 20;
-
-    const mealLabels = {
-      breakfast: "Bữa sáng",
-      lunch: "Bữa trưa",
-      dinner: "Bữa tối",
-      snacks: "Bữa phụ",
-    };
-
-    const mealRows = [];
-    
-    if (meals && meals.length > 0) {
-      meals.forEach((meal) => {
-        const mealName = mealLabels[meal.meal_type] || meal.title || "Bữa ăn";
-        const items = meal.items || [];
-
-        items.forEach((item) => {
-          const foodName = item.name || item.display_name || item.food_name || "Món ăn";
-          const portion = item.portion || "1 phần";
-          const kcal = formatNumber(item.calories || item.kcal || 0);
-          const proteinValue = formatNumber(item.protein || item.protein_g || 0);
-          
-          // Use the same logic as Dashboard to determine eaten status
-          const entry = getMealLogEntry(mealLog, meal, item);
-          const isEaten = isFoodMarkedEaten(item, entry);
-          const status = isEaten ? "Đã ăn" : "Chưa ăn";
-
-          mealRows.push([mealName, foodName, portion, kcal, proteinValue, status]);
-        });
-      });
-    }
-
-    if (mealRows.length === 0) {
-      mealRows.push(["-", "Chưa có dữ liệu nhật ký ăn uống", "-", "-", "-", "-"]);
-    }
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Bữa ăn", "Tên món", "Khẩu phần", "Kcal", "Protein (g)", "Trạng thái"]],
-      body: mealRows,
-      styles: {
-        font: "Roboto",
-        fontSize: 9,
-        cellPadding: 6,
-        lineColor: [220, 220, 220],
-        lineWidth: 0.5,
-        overflow: "linebreak",
-      },
-      headStyles: {
-        fillColor: NUTRIGAIN_GREEN,
-        textColor: [255, 255, 255],
-        font: "Roboto",
-        fontStyle: "bold",
-        halign: "center",
-      },
-      columnStyles: {
-        0: { cellWidth: 65 },
-        1: { cellWidth: 160 },
-        2: { cellWidth: 70 },
-        3: { cellWidth: 60, halign: "right", fontStyle: "bold" },
-        4: { cellWidth: 70, halign: "right" },
-        5: { cellWidth: 90, halign: "center" },
-      },
-      alternateRowStyles: {
-        fillColor: [250, 250, 250],
+      didParseCell: function(data) {
+        // Color code status column
+        if (data.column.index === 2 && data.row.section === "body") {
+          const statusText = data.cell.text[0] || "";
+          if (statusText.includes("✓")) {
+            data.cell.styles.textColor = [76, 175, 80]; // Green - all eaten
+            data.cell.styles.fontStyle = "bold";
+          } else if (statusText.includes("→")) {
+            data.cell.styles.textColor = [245, 158, 11]; // Orange - partially eaten
+          } else if (statusText.includes("○")) {
+            data.cell.styles.textColor = [239, 68, 68]; // Red - not eaten
+          }
+        }
       },
       margin: { left: margin },
     });
@@ -751,13 +922,25 @@ export async function exportNutritionReportPdf(data) {
     doc.setFontSize(13);
     doc.setFont("Roboto", "bold");
     doc.setTextColor(...NUTRIGAIN_GREEN);
-    safeText(doc, "PHẦN 5. ĐÁNH GIÁ DINH DƯỠNG", margin, yPos);
+    safeText(doc, "PHẦN 5. ĐÁNH GIÁ & KHUYẾN NGHỊ 💡", margin, yPos);
     
     doc.setDrawColor(...NUTRIGAIN_GREEN);
     doc.setLineWidth(2);
-    safeLine(doc, margin, yPos + 3, margin + 200, yPos + 3);
+    safeLine(doc, margin, yPos + 3, margin + 240, yPos + 3);
     
-    yPos += 20;
+    yPos += 25;
+
+    // Add info box background
+    doc.setFillColor(254, 249, 240); // Light orange background
+    const assessmentBoxHeight = 15;
+    safeRoundedRect(doc, margin, yPos - 8, contentWidth, assessmentBoxHeight, 4, 4, "F");
+    
+    doc.setFontSize(9);
+    doc.setFont("Roboto", "bold");
+    doc.setTextColor(146, 64, 14); // Dark orange
+    safeText(doc, "🤖 NutriGain AI Advisor - Phân tích chế độ ăn của bạn:", margin + 8, yPos);
+    
+    yPos += 18;
 
     doc.setFontSize(10);
     doc.setFont("Roboto", "normal");
@@ -766,26 +949,70 @@ export async function exportNutritionReportPdf(data) {
     // Generate assessment
     const assessments = generateNutritionAssessment(targetCal, eatenCal, progress, protein, carbs, fat, targetProtein);
 
-    assessments.forEach((assessment) => {
-      const lines = doc.splitTextToSize(assessment, contentWidth - 15);
-      lines.forEach((line) => {
-        if (yPos + 16 > pageHeight - margin - 60) {
+    assessments.forEach((assessment, index) => {
+      // Add bullet point styling
+      const bulletSymbol = assessment.startsWith("✓") ? "✓" : 
+                          assessment.startsWith("⚠") ? "⚠️" : 
+                          assessment.startsWith("❌") ? "❌" : "→";
+      
+      // Remove emoji from text if present
+      const cleanText = assessment.replace(/^[✓⚠️❌→]\s*/, "");
+      
+      // Set color based on type
+      if (bulletSymbol === "✓") {
+        doc.setTextColor(76, 175, 80); // Green
+      } else if (bulletSymbol === "⚠️") {
+        doc.setTextColor(245, 158, 11); // Orange
+      } else if (bulletSymbol === "❌") {
+        doc.setTextColor(239, 68, 68); // Red
+      } else {
+        doc.setTextColor(59, 130, 246); // Blue
+      }
+      
+      doc.setFont("Roboto", "bold");
+      safeText(doc, bulletSymbol, margin + 8, yPos);
+      
+      doc.setFont("Roboto", "normal");
+      doc.setTextColor(0, 0, 0);
+      
+      const lines = doc.splitTextToSize(cleanText, contentWidth - 30);
+      lines.forEach((line, lineIndex) => {
+        if (yPos + 16 > pageHeight - margin - 80) {
           doc.addPage();
           yPos = margin;
         }
-        safeText(doc, line, margin + 5, yPos);
-        yPos += 16;
+        safeText(doc, line, margin + 20, yPos);
+        yPos += 14;
       });
       yPos += 4; // Extra space between assessments
     });
 
     yPos += 10;
+    
+    // Add signature box
+    doc.setFillColor(248, 250, 252); // Light gray
+    const signatureHeight = 35;
+    safeRoundedRect(doc, margin, yPos, contentWidth, signatureHeight, 4, 4, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(1);
+    safeRoundedRect(doc, margin, yPos, contentWidth, signatureHeight, 4, 4, "S");
+    
+    doc.setFontSize(9);
+    doc.setFont("Roboto", "bold");
+    doc.setTextColor(71, 85, 105);
+    safeText(doc, "🏥 Hệ thống NutriGain", margin + 10, yPos + 15);
+    
+    doc.setFont("Roboto", "normal");
+    doc.setTextColor(100, 116, 139);
+    safeText(doc, `Báo cáo được tạo tự động vào ${formatDate(new Date())}`, margin + 10, yPos + 28);
+    
+    yPos += signatureHeight + 15;
 
     // Disclaimer
     doc.setFontSize(9);
     doc.setFont("Roboto", "normal");
     doc.setTextColor(100, 100, 100);
-    const disclaimer = "Lưu ý: Báo cáo này chỉ mang tính chất tham khảo, không thay thế tư vấn y tế hoặc chỉ định của chuyên gia dinh dưỡng.";
+    const disclaimer = "⚕️ Lưu ý: Báo cáo này chỉ mang tính chất tham khảo, không thay thế tư vấn y tế hoặc chỉ định của chuyên gia dinh dưỡng. Vui lòng tham khảo ý kiến bác sĩ nếu có vấn đề sức khỏe.";
     const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth - 10);
     disclaimerLines.forEach((line) => {
       if (yPos + 14 > pageHeight - margin - 40) {
@@ -793,26 +1020,45 @@ export async function exportNutritionReportPdf(data) {
         yPos = margin;
       }
       safeText(doc, line, margin + 5, yPos);
-      yPos += 14;
+      yPos += 12;
     });
 
 
     // === FOOTER ===
     const totalPages = doc.internal.pages.length - 1;
+    const generatedDateTime = new Date();
+    const generatedDateStr = `${formatDate(generatedDateTime)} ${generatedDateTime.getHours()}:${String(generatedDateTime.getMinutes()).padStart(2, '0')}`;
+    
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       
       // Footer green line
       doc.setDrawColor(...NUTRIGAIN_GREEN);
-      doc.setLineWidth(1);
-      safeLine(doc, margin, pageHeight - 30, pageWidth - margin, pageHeight - 30);
+      doc.setLineWidth(2);
+      safeLine(doc, margin, pageHeight - 45, pageWidth - margin, pageHeight - 45);
 
-      doc.setFontSize(9);
+      // Three-column footer layout
+      doc.setFontSize(8);
       doc.setFont("Roboto", "normal");
       doc.setTextColor(100, 100, 100);
       
-      safeText(doc, "NutriGain - Hệ thống Dinh dưỡng Thông minh", margin, pageHeight - 16);
-      safeText(doc, `Trang ${i}/${totalPages}`, pageWidth - margin, pageHeight - 16, { align: "right" });
+      // Left: System info
+      safeText(doc, "🥗 NutriGain - Hệ thống Dinh dưỡng Thông minh", margin, pageHeight - 30);
+      safeText(doc, "📧 support@nutrigain.vn | 🌐 www.nutrigain.vn", margin, pageHeight - 18);
+      
+      // Center: Confidential notice
+      doc.setFont("Roboto", "bold");
+      doc.setTextColor(239, 68, 68);
+      safeText(doc, "🔒 BÁO CÁO MẬT", pageWidth / 2, pageHeight - 30, { align: "center" });
+      doc.setFont("Roboto", "normal");
+      doc.setTextColor(100, 100, 100);
+      safeText(doc, "Chỉ dành cho người dùng", pageWidth / 2, pageHeight - 18, { align: "center" });
+      
+      // Right: Page number and date
+      doc.setFont("Roboto", "bold");
+      safeText(doc, `Trang ${i}/${totalPages}`, pageWidth - margin, pageHeight - 30, { align: "right" });
+      doc.setFont("Roboto", "normal");
+      safeText(doc, `Tạo lúc: ${generatedDateStr}`, pageWidth - margin, pageHeight - 18, { align: "right" });
     }
 
     // Save PDF
