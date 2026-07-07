@@ -1,17 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import NutriGainLogo from "./NutriGainLogo";
 import { BookOpen } from "lucide-react";
-
-const menuItems = [
-  { id: "overview", label: "Tổng quan", path: "/dashboard", icon: DashboardIcon },
-  { id: "meal-plan", label: "Kế hoạch bữa ăn", path: "/dashboard", icon: MealIcon },
-  { id: "journal", label: "Thống kê ăn uống", path: "/dashboard", icon: JournalIcon },
-  { id: "charts", label: "Theo dõi tăng cân", path: "/dashboard", icon: ChartIcon },
-  { id: "thanh-tich", label: "Thành tích", path: "/thanh-tich", icon: HealthEducationSidebarItem },
-  { id: "health-education", label: "Giáo dục sức khỏe", path: "/health-education", icon: HealthEducationSidebarItem },
-  { id: "notifications", label: "Thông báo", path: "/dashboard", icon: BellIcon },
-  { id: "account", label: "Tài khoản", path: "/dashboard", icon: UserIcon },
-  { id: "help", label: "Hỗ trợ", path: "/dashboard", icon: HelpIcon },
-];
 
 export default function Sidebar({
   userEmail,
@@ -22,14 +11,20 @@ export default function Sidebar({
   onLogout,
   maintainMode = false,
 }) {
+  const { t } = useTranslation();
   const initials = (userEmail || "NG").slice(0, 2).toUpperCase();
 
-  const resolvedMenuItems = menuItems.map((item) => {
-    if (item.id === "charts" && maintainMode) {
-      return { ...item, label: "Theo dõi cân nặng" };
-    }
-    return item;
-  });
+  const menuItems = [
+    { id: "overview", labelKey: "sidebar.overview", path: "/dashboard", icon: DashboardIcon },
+    { id: "meal-plan", labelKey: "sidebar.mealPlan", path: "/dashboard", icon: MealIcon },
+    { id: "journal", labelKey: "sidebar.journal", path: "/dashboard", icon: JournalIcon },
+    { id: "charts", labelKey: maintainMode ? "sidebar.chartsWeight" : "sidebar.charts", path: "/dashboard", icon: ChartIcon },
+    { id: "thanh-tich", labelKey: "sidebar.achievements", path: "/thanh-tich", icon: HealthEducationSidebarItem },
+    { id: "health-education", labelKey: "sidebar.healthEducation", path: "/health-education", icon: HealthEducationSidebarItem },
+    { id: "notifications", labelKey: "sidebar.notifications", path: "/dashboard", icon: BellIcon },
+    { id: "account", labelKey: "sidebar.account", path: "/dashboard", icon: UserIcon },
+    { id: "help", labelKey: "sidebar.help", path: "/dashboard", icon: HelpIcon },
+  ];
 
   return (
     <aside
@@ -41,7 +36,7 @@ export default function Sidebar({
         <button
           type="button"
           onClick={() => onNavigate?.("overview", "/dashboard")}
-          aria-label="Về trang tổng quan"
+          aria-label={t('sidebar.goToOverview')}
           className="rounded-xl transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
         >
           <NutriGainLogo size="sm" />
@@ -49,7 +44,7 @@ export default function Sidebar({
         <button
           className="grid h-10 w-10 place-items-center rounded-xl bg-white text-brand-text-sub shadow-sm lg:hidden"
           onClick={onClose}
-          aria-label="Đóng menu"
+          aria-label={t('sidebar.closeMenu')}
         >
           <CloseIcon />
         </button>
@@ -57,10 +52,10 @@ export default function Sidebar({
 
       <nav className="sidebar-scroll flex-1 px-3 pb-5">
         <div className="mb-3 px-4 text-xs font900 uppercase tracking-[0.18em] text-brand-text-sub">
-          Workspace
+          {t('sidebar.workspace')}
         </div>
         <div className="space-y-1">
-          {resolvedMenuItems.map((item) => {
+          {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
             return (
@@ -81,7 +76,7 @@ export default function Sidebar({
                 >
                   <Icon />
                 </span>
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>
               </button>
             );
           })}
@@ -97,9 +92,10 @@ export default function Sidebar({
             <p className="truncate text-sm font900 text-brand-text-main">{userEmail || "user@nutrigain.vn"}</p>
             <div className="mt-1 flex items-center gap-2 text-xs font800 text-brand-primary">
               <span className="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_0_4px_rgba(16,185,129,0.14)]" />
-              Live Tracking
+              {t('sidebar.liveTracking')}
             </div>
           </div>
+
         </div>
         <button
           type="button"
@@ -107,7 +103,7 @@ export default function Sidebar({
           onClick={onLogout}
         >
           <LogoutIcon />
-          Đăng xuất
+          {t('sidebar.logout')}
         </button>
       </div>
     </aside>
@@ -142,16 +138,8 @@ function HealthEducationSidebarItem() {
   return <BookOpen className="h-5 w-5" strokeWidth={2} />;
 }
 
-function FoodIcon() {
-  return <IconBase><path d="M12 21c4-3 7-7 7-11a7 7 0 1 0-14 0c0 4 3 8 7 11z" /><path d="M12 10h.01" /></IconBase>;
-}
-
 function UserIcon() {
   return <IconBase><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" /></IconBase>;
-}
-
-function SettingsIcon() {
-  return <IconBase><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 3.4-.2-.1a1.8 1.8 0 0 0-1.9-.3 1.8 1.8 0 0 0-1.1 1.6V22H9.4v-.3A1.8 1.8 0 0 0 8.3 20a1.8 1.8 0 0 0-1.9.3l-.2.1-2-3.4.1-.1A1.7 1.7 0 0 0 4.6 15 1.8 1.8 0 0 0 3 13.9h-.3V10h.3a1.8 1.8 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-3.4.2.1a1.8 1.8 0 0 0 1.9.3A1.8 1.8 0 0 0 9.4 2.3V2h5.2v.3A1.8 1.8 0 0 0 15.7 4a1.8 1.8 0 0 0 1.9-.3l.2-.1 2 3.4-.1.1a1.7 1.7 0 0 0-.3 1.9A1.8 1.8 0 0 0 21 10h.3v3.9H21a1.8 1.8 0 0 0-1.6 1.1z" /></IconBase>;
 }
 
 function BellIcon() {

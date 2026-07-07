@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 
 from app.api.dependencies import get_current_user, get_optional_current_user, require_admin, get_user_language
 from app.api.v1.routes.ai_chat import router as ai_chat_router
+from app.api.v1.routes.learning import router as learning_router
 from app.core.database import get_db
 from app.core.config import settings
 from app.models.entities import User, UserFeedback
@@ -113,6 +114,7 @@ except Exception as exc:  # pragma: no cover - protects auth routes from unrelat
     logger.exception("[RECOMMENDATION CONTROLLER IMPORT ERROR] %s", exc)
 
 router.include_router(ai_chat_router)
+router.include_router(learning_router)
 auth_service = AuthService()
 food_service = FoodService()
 user_service = UserService()

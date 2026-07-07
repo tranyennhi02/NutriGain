@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import NutriGainLogo from "../../components/NutriGainLogo";
 import { getGoogleOAuthUrl } from "../../services/authService";
 
@@ -20,6 +21,8 @@ export default function AuthCard({
   serverError,
   toast,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     console.log("[AUTH FORM ACTIVE] restored old form, empty credentials");
   }, []);
@@ -190,18 +193,18 @@ export default function AuthCard({
   }
 
   const title = isVerificationStep
-    ? "Kiểm tra email của bạn"
+    ? t('landing.auth.checkEmail')
     : isRegister
-      ? "Tạo tài khoản mới"
-      : "Chào mừng trở lại";
+      ? t('landing.auth.createAccount')
+      : t('landing.auth.welcomeBack');
   const subtitle = isVerificationStep
-    ? `NutriGain đã gửi mã xác thực 6 số đến ${verificationEmail || form.email}. Nhập mã để hoàn tất đăng ký.`
+    ? t('landing.auth.verifyCodeSent', { email: verificationEmail || form.email })
     : isRegister
-      ? "Bắt đầu xây dựng kế hoạch dinh dưỡng của bạn."
-      : "Đăng nhập để tiếp tục kế hoạch dinh dưỡng của bạn.";
+      ? t('landing.auth.getStarted')
+      : t('landing.auth.loginSubtitle');
 
-  const submitLabel = isVerificationStep ? "Xác thực email" : isRegister ? "Tạo tài khoản" : "Đăng nhập";
-  const submittingLabel = isVerificationStep ? "Đang xác thực..." : isRegister ? "Đang tạo tài khoản..." : "Đang đăng nhập...";
+  const submitLabel = isVerificationStep ? t('landing.auth.verifyEmail') : isRegister ? t('landing.auth.createAccount') : t('landing.auth.login');
+  const submittingLabel = isVerificationStep ? t('landing.auth.verifying') : isRegister ? t('landing.auth.creatingAccount') : t('landing.auth.loggingIn');
   return (
     <div className="w-full px-4 py-0 overflow-x-hidden">
       <div className="mx-auto w-full max-w-[500px] rounded-[36px] border border-emerald-100 bg-white/95 p-8 shadow-[0_28px_90px_rgba(15,23,42,0.14)] backdrop-blur md:p-10">
@@ -223,21 +226,21 @@ export default function AuthCard({
               className="mb-5 flex h-12 w-full items-center justify-center gap-2.5 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <GoogleIcon />
-              <span>Tiếp tục với Google</span>
+              <span>{t('landing.auth.loginWithGoogle')}</span>
             </button>
 
             <div className="mb-5 flex items-center gap-4">
               <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">hoặc đăng nhập bằng email</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('landing.auth.orLoginWith')}</span>
               <div className="h-px flex-1 bg-slate-200" />
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit} noValidate>
               {isRegister && (
                 <TextField
-                  label="Họ tên"
+                  label={t('landing.auth.fullName')}
                   name="fullName"
-                  placeholder="Họ và tên"
+                  placeholder={t('landing.auth.fullNamePlaceholder')}
                   value={form.fullName}
                   error={errors.fullName}
                   onChange={handleChange}
@@ -246,10 +249,10 @@ export default function AuthCard({
               )}
 
               <TextField
-                label="Email"
+                label={t('landing.auth.email')}
                 name="email"
                 type="email"
-                placeholder="email@example.com"
+                placeholder={t('landing.auth.emailPlaceholder')}
                 value={form.email}
                 error={errors.email}
                 onChange={handleChange}
@@ -257,9 +260,9 @@ export default function AuthCard({
               />
 
               <PasswordField
-                label="Mật khẩu"
+                label={t('landing.auth.password')}
                 name="password"
-                placeholder="Nhập mật khẩu"
+                placeholder={t('landing.auth.passwordPlaceholder')}
                 value={form.password}
                 error={errors.password}
                 onChange={handleChange}
@@ -270,9 +273,9 @@ export default function AuthCard({
 
               {isRegister && (
                 <PasswordField
-                  label="Nhập lại mật khẩu"
+                  label={t('landing.auth.confirmPassword')}
                   name="confirmPassword"
-                  placeholder="Nhập lại mật khẩu"
+                  placeholder={t('landing.auth.confirmPassword')}
                   value={form.confirmPassword}
                   error={errors.confirmPassword}
                   onChange={handleChange}
@@ -292,7 +295,7 @@ export default function AuthCard({
                     }}
                     className="text-sm font-semibold text-slate-500 transition hover:text-emerald-600"
                   >
-                    Quên mật khẩu?
+                    {t('landing.auth.forgotPassword')}
                   </button>
                 </div>
               )}
@@ -314,9 +317,9 @@ export default function AuthCard({
         {isVerificationStep && (
           <form className="space-y-4" onSubmit={handleVerifySubmit} noValidate>
             <TextField
-              label="Mã xác thực"
+              label={t('landing.auth.verificationCode')}
               name="verificationCode"
-              placeholder="Nhập mã xác thực"
+              placeholder={t('landing.auth.verificationCodePlaceholder')}
               value={form.verificationCode}
               error={errors.verificationCode}
               onChange={handleChange}
@@ -327,10 +330,10 @@ export default function AuthCard({
 
             <div className="flex flex-col gap-2 text-sm font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
               <button type="button" onClick={onResendVerification} className="text-left transition hover:text-emerald-600">
-                Gửi lại mã
+                {t('landing.auth.resendCode')}
               </button>
               <button type="button" onClick={onChangeEmail} className="text-left transition hover:text-emerald-600">
-                Đổi email
+                {t('landing.auth.changeEmail')}
               </button>
             </div>
 
@@ -350,16 +353,16 @@ export default function AuthCard({
         <p className="mt-6 text-center text-sm font-semibold text-slate-500">
           {isRegister ? (
             <>
-              Đã có tài khoản?{" "}
+              {t('landing.auth.haveAccount')}{" "}
               <button type="button" onClick={onSwitchMode} className="font-extrabold text-emerald-600 transition hover:underline">
-                Đăng nhập
+                {t('landing.auth.login')}
               </button>
             </>
           ) : (
             <>
-              Chưa có tài khoản?{" "}
+              {t('landing.auth.noAccount')}{" "}
               <button type="button" onClick={onSwitchMode} className="font-extrabold text-emerald-600 transition hover:underline">
-                Đăng ký miễn phí
+                {t('landing.auth.registerFree')}
               </button>
             </>
           )}
@@ -367,7 +370,7 @@ export default function AuthCard({
 
         <div className="mt-8 text-center">
           <a href="#hero" className="text-sm font-semibold text-slate-500 transition hover:text-emerald-600">
-            ← Quay lại trang chủ
+            ← {t('landing.auth.backToHome')}
           </a>
         </div>
       </div>

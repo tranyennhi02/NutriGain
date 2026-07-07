@@ -1,5 +1,13 @@
 import { Calendar, Download } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { pageHeaderStyles } from "./PageHeader";
+
+// Map i18n language codes to Intl locale codes
+const LOCALE_MAP = {
+  vi: "vi-VN",
+  en: "en-US",
+  ja: "ja-JP",
+};
 
 export default function Header({
   title,
@@ -10,7 +18,10 @@ export default function Header({
   showExportReport = false,
   isExportingReport = false,
 }) {
-  const today = new Date().toLocaleDateString("vi-VN", {
+  const { t, i18n } = useTranslation();
+  const locale = LOCALE_MAP[i18n.language] || "vi-VN";
+
+  const today = new Date().toLocaleDateString(locale, {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -24,7 +35,7 @@ export default function Header({
           <button
             className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm lg:hidden hover:bg-slate-50 transition-colors"
             onClick={onToggleMenu}
-            aria-label="Mở menu"
+            aria-label={t('sidebar.openMenu')}
             type="button"
           >
             <MenuIcon />
@@ -41,9 +52,16 @@ export default function Header({
             {today}
           </div>
           {showExportReport ? (
-            <button className="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow hover:bg-slate-800 transition-colors disabled:opacity-60" onClick={onExport} disabled={isExportingReport} type="button">
+            <button
+              className="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow hover:bg-slate-800 transition-colors disabled:opacity-60"
+              onClick={onExport}
+              disabled={isExportingReport}
+              type="button"
+            >
               <Download size={16} strokeWidth={2.6} />
-              <span className="hidden sm:inline">{isExportingReport ? "Đang xuất..." : "Xuất PDF"}</span>
+              <span className="hidden sm:inline">
+                {isExportingReport ? t('dashboard.exporting') : t('dashboard.exportPDF')}
+              </span>
             </button>
           ) : null}
         </div>

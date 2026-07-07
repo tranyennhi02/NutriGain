@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { performLogout, readSession, submitLogin } from "./controllers/authController";
 import { saveUserProfile, submitRecommendation } from "./controllers/recommendationController";
@@ -11,6 +12,7 @@ import OnboardingView from "./views/OnboardingView";
 
 // ─── Logout Confirmation Modal ──────────────────────────────────────────────
 function LogoutConfirmModal({ onConfirm, onCancel }) {
+  const { t } = useTranslation();
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-4 backdrop-blur-sm"
@@ -28,12 +30,12 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
 
         {/* Title */}
         <h3 id="logout-modal-title" className="text-center text-xl font-black text-slate-900 leading-tight mb-3">
-          Xác nhận đăng xuất
+          {t('app.logoutConfirmTitle')}
         </h3>
 
         {/* Description */}
         <p className="text-center text-sm text-slate-600 mb-8">
-          Bạn có chắc muốn đăng xuất khỏi tài khoản?
+          {t('app.logoutConfirmDesc')}
         </p>
 
         {/* Actions */}
@@ -43,14 +45,14 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
             onClick={onConfirm}
             className="h-12 w-full rounded-2xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-[0.98]"
           >
-            Đăng xuất
+            {t('app.logoutButton')}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="h-12 w-full rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
           >
-            Hủy
+            {t('app.cancelButton')}
           </button>
         </div>
       </div>
@@ -62,6 +64,40 @@ import ResetPasswordView from "./views/ResetPasswordView";
 import { defaultFormState } from "./models/recommendationModel";
 import { parseFoodList } from "./utils/foodList.js";
 import { normalizeProfilePayload, foodListToInput } from "./utils/profileFormUtils.js";
+
+// ─── Loading helpers (translated) ─────────────────────────────────────────────
+function AppLoadingText() {
+  const { t } = useTranslation();
+  return <p className="mt-4 text-[#64748B] font-medium">{t('app.loadingAccount')}</p>;
+}
+
+function AppLoadingError({ onReload, onLogout }) {
+  const { t } = useTranslation();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-6">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-900">{t('app.loadFailedTitle')}</h2>
+        <p className="mt-2 text-sm text-slate-600">{t('app.loadFailedDesc')}</p>
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            className="h-10 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            onClick={onReload}
+          >
+            {t('app.reload')}
+          </button>
+          <button
+            type="button"
+            className="h-10 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"
+            onClick={onLogout}
+          >
+            {t('common.logout')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function isProfileComplete(profile) {
   if (!profile) return false;
@@ -633,30 +669,7 @@ export default function App() {
   if (appView === "checking") {
     if (authLoadTimedOut) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-6">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">Không thể tải thông tin tài khoản.</h2>
-            <p className="mt-2 text-sm text-slate-600">Vui lòng tải lại hoặc đăng xuất để đăng nhập lại.</p>
-            <div className="mt-5 flex gap-3">
-              <button
-                type="button"
-                className="h-10 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => window.location.reload()}
-              >
-                Tải lại
-              </button>
-              <button
-                type="button"
-                className="h-10 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"
-                onClick={() => {
-                  handleLogout();
-                }}
-              >
-                Đăng xuất
-              </button>
-            </div>
-          </div>
-        </div>
+        <AppLoadingError onReload={() => window.location.reload()} onLogout={handleLogout} />
       );
     }
 
@@ -664,7 +677,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="flex flex-col items-center">
           <span className="h-10 w-10 animate-spin rounded-full border-4 border-[#10B981]/20 border-t-[#10B981]" />
-          <p className="mt-4 text-[#64748B] font-medium">Đang tải thông tin...</p>
+          <AppLoadingText />
         </div>
       </div>
     );

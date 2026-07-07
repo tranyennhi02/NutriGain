@@ -6397,10 +6397,20 @@ function MealsPage({
     }
     return null;
   }, [result]);
-  const ingredientCoverage = useMemo(
-    () => summarizeIngredientCoverageFromMeals(result?.meal_plan || meals, selectedIngredients),
-    [result?.meal_plan, meals, selectedIngredients],
-  );
+  const ingredientCoverage = useMemo(() => {
+    // Prioritize backend-calculated coverage (more accurate)
+    const backendCoverage = result?.meal_plan?.ingredient_coverage || result?.ingredient_coverage;
+    if (backendCoverage && Array.isArray(backendCoverage.coveredIngredients) && Array.isArray(backendCoverage.missingIngredients)) {
+      return {
+        hasSelected: selectedIngredients.length > 0,
+        selected: selectedIngredients,
+        covered: backendCoverage.coveredIngredients,
+        missing: backendCoverage.missingIngredients,
+      };
+    }
+    // Fallback to frontend calculation
+    return summarizeIngredientCoverageFromMeals(result?.meal_plan || meals, selectedIngredients);
+  }, [result?.meal_plan, result?.ingredient_coverage, meals, selectedIngredients]);
   const hasAnyEatenItem = displayMeals.some((meal) =>
     (meal.items || []).some((item) => isMealItemEaten(meal, item, mealLog)),
   );
@@ -8893,9 +8903,9 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
   };
 
   const tabs = [
-    { id: 'profile', label: 'Hồ sơ cá nhân', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-    { id: 'security', label: 'Bảo mật', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
-    { id: 'preferences', label: 'Tuỳ chỉnh', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' }
+    { id: 'profile', label: 'Hồ sơ sức khoẻ', desc: 'Chỉ số cơ thể & Mục tiêu', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', color: 'text-blue-500' },
+    { id: 'preferences', label: 'Cá nhân hoá', desc: 'Thói quen & Báo cáo', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', color: 'text-purple-500' },
+    { id: 'security', label: 'Bảo mật', desc: 'Tài khoản & Mật khẩu', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', color: 'text-emerald-500' }
   ];
 
   const handleMockSave = () => {
@@ -8903,198 +8913,256 @@ function AccountSettingsPage({ email, profile, eligibility, errors, onChange, on
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
-        eyebrow="HỒ SƠ"
-        title="Tài khoản"
-        subtitle="Cập nhật hồ sơ cá nhân và thông tin dinh dưỡng của bạn."
+        eyebrow="CÀI ĐẶT & QUẢN LÝ"
+        title="Tài khoản & Hồ sơ"
+        subtitle="Quản lý trung tâm dữ liệu sức khoẻ NutriGain của bạn."
       />
 
-      <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <div className="space-y-5">
-        <AccountPanel email={email} />
-        <div className="glass-panel p-2">
-          <nav className="flex flex-col gap-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font900 transition-colors ${
-                  activeTab === tab.id ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <svg className="w-5 h-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
-                </svg>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+      <section className="grid gap-8 xl:grid-cols-[340px_minmax(0,1fr)] items-start">
+        <div className="space-y-6 sticky top-24">
+          <AccountPanel email={email} />
+          <div className="bg-white rounded-[32px] p-3 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100">
+            <nav className="flex flex-col gap-2">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-4 px-4 py-4 rounded-[24px] transition-all duration-300 text-left ${
+                    activeTab === tab.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 scale-[1.02]' : 'bg-transparent text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className={`p-2.5 rounded-[16px] ${activeTab === tab.id ? 'bg-white/10 text-white' : 'bg-slate-100 ' + tab.color}`}>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className={`text-[15px] font-black tracking-tight ${activeTab === tab.id ? 'text-white' : 'text-slate-900'}`}>{tab.label}</div>
+                    <div className={`text-[12px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-slate-300' : 'text-slate-500'}`}>{tab.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-5">
-        {activeTab === 'profile' && (
-          <section className="glass-panel p-5 sm:p-6 animate-fade-in">
-            <h2 className="text-2xl font-black text-slate-950">Hồ sơ dinh dưỡng</h2>
-            <p className="mt-2 text-sm font800 leading-6 text-slate-500">Cập nhật thông tin để NutriGain tính BMI, kcal mục tiêu và tạo thực đơn phù hợp.</p>
-            {eligibility?.warnings && eligibility.warnings.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {eligibility.warnings.map((warn, i) => (
-                  <WarningCard key={i} text={warn} />
-                ))}
-              </div>
-            )}
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <ProfileField label="Tuổi" name="age" type="number" min="1" max="120" value={profile.age} error={errors.age} onChange={onChange} />
-              <ProfileSelect label="Giới tính" name="sex" value={profile.sex} error={errors.sex} onChange={onChange} options={[{ value: "", label: "Không chọn" }, { value: "male", label: "Nam" }, { value: "female", label: "Nữ" }]} />
-              <ProfileField label="Chiều cao (cm)" name="height" type="number" min="100" max="230" value={profile.height} error={errors.height} onChange={onChange} />
-              <ProfileField label="Cân nặng hiện tại (kg)" name="weight" type="number" min="20" max="250" value={profile.weight} error={errors.weight} onChange={onChange} />
-              <ProfileField label="Cân nặng mục tiêu (kg)" name="target_weight" type="number" min="20" max="250" value={profile.target_weight || ""} error={errors.target_weight} onChange={onChange} />
-              <ProfileField label="Thời gian mục tiêu" name="target_duration_value" type="number" min="1" value={profile.target_duration_value || ""} error={errors.target_duration_value} onChange={onChange} />
-              <ProfileSelect label="Đơn vị thời gian" name="target_duration_unit" value={profile.target_duration_unit || "month"} error={errors.target_duration_unit} onChange={onChange} options={[{ value: "week", label: "Tuần" }, { value: "month", label: "Tháng" }]} />
-              <ProfileSelect label="Tốc độ tăng cân" name="gain_speed" value={profile.gain_speed} error={errors.gain_speed} onChange={onChange} options={[{ value: "slow", label: "Nhẹ, ổn định" }, { value: "medium", label: "Vừa phải" }, { value: "fast", label: "Mạnh hơn" }]} />
-              <ProfileSelect label="Mức độ vận động" name="activity" value={profile.activity} error={errors.activity} onChange={onChange} options={[{ value: "default", label: "Mặc định" }, { value: "sedentary", label: "Ít vận động" }, { value: "light", label: "Nhẹ" }, { value: "moderate", label: "Vừa phải" }, { value: "active", label: "Năng động" }, { value: "very_active", label: "Rất năng động" }]} />
-              <ProfileSelect label="Chế độ ăn" name="diet_style" value={profile.diet_style} error={errors.diet_style} onChange={onChange} options={[{ value: "balanced", label: "Cân bằng" }, { value: "eat_clean", label: "Eat Clean" }, { value: "high_protein", label: "Giàu Protein" }, { value: "vegetarian", label: "Ăn chay" }]} />
-              <ProfileSelect label="Ngân sách" name="budget_level" value={profile.budget_level} error={errors.budget_level} onChange={onChange} options={[{ value: "standard", label: "Tiêu chuẩn" }, { value: "low", label: "Tiết kiệm" }, { value: "high", label: "Linh hoạt" }]} />
-              <ProfileSelect label="Số món mỗi bữa" name="meal_complexity" value={profile.meal_complexity} error={errors.meal_complexity} onChange={onChange} options={[{ value: "simple", label: "3 món/bữa" }, { value: "balanced", label: "4 món/bữa" }, { value: "full", label: "5 món/bữa" }]} />
-              <TagInput label="Món yêu thích" name="favorite_foods" value={profile.favorite_foods} error={errors.favorite_foods} onChange={onChange} helperText="Nhập các món muốn ưu tiên." placeholder="Ví dụ: chuối, sữa, cơm, trứng" />
-              <TagInput label="Danh sách loại trừ" name="unfavorite_foods" value={profile.unfavorite_foods} error={errors.unfavorite_foods} onChange={onChange} helperText="Ví dụ: sữa động vật, đậu nành, gà, bò." placeholder="Ví dụ: tôm, đậu phộng, trứng" />
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                className="h-12 rounded-2xl bg-slate-700 px-6 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-800 transition"
-                onClick={onSaveProfile}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Đang lưu..." : "Lưu thông tin"}
-              </button>
-              <button
-                type="button"
-                className="h-12 rounded-2xl bg-emerald-600 px-6 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-emerald-700 transition"
-                onClick={onRegenerate}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Đang tạo..." : "Tạo lại thực đơn"}
-              </button>
-            </div>
-          </section>
-        )}
-
-
-        {activeTab === 'security' && (
-          <section className="glass-panel p-5 sm:p-6 animate-fade-in">
-            <p className="text-xs font900 uppercase tracking-[0.18em] text-emerald-700">Bảo mật</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">Thay đổi mật khẩu</h2>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <ProfileField label="Mật khẩu hiện tại" name="currentPassword" type="password" />
-              <div className="hidden sm:block"></div>
-              <ProfileField label="Mật khẩu mới" name="newPassword" type="password" />
-              <ProfileField label="Xác nhận mật khẩu mới" name="confirmPassword" type="password" />
-            </div>
-            <div className="mt-5 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={handleMockSave}
-                className="h-12 rounded-2xl bg-slate-950 px-6 text-sm font900 text-white hover:bg-slate-800 transition"
-              >
-                Lưu mật khẩu
-              </button>
-            </div>
-          </section>
-        )}
-
-        {activeTab === 'preferences' && (
-          <section className="glass-panel p-5 sm:p-6 animate-fade-in">
-            <p className="text-xs font900 uppercase tracking-[0.18em] text-emerald-700">Tuỳ chỉnh</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">Giao diện và thông báo</h2>
-            <div className="mt-7 space-y-6">
+        <div className="min-w-0">
+          {activeTab === 'profile' && (
+            <div className="space-y-8 animate-fade-in relative pb-20">
               
-              <div>
-                <h3 className="text-sm font900 text-slate-900 mb-3">Chủ đề (Theme)</h3>
-                <div className="flex gap-3">
-                  <button className="flex-1 rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-4 text-center font800 text-emerald-700">Sáng (Light)</button>
-                  <button onClick={handleMockSave} className="flex-1 rounded-2xl border-2 border-transparent bg-slate-50 p-4 text-center font800 text-slate-500 hover:bg-slate-100 transition">Tối (Dark)</button>
+              {eligibility?.warnings && eligibility.warnings.length > 0 && (
+                <div className="space-y-3 bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-[24px] border border-amber-200/60 shadow-sm">
+                   <h4 className="font-black text-amber-900 flex items-center gap-2">
+                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                     Cần chú ý
+                   </h4>
+                  {eligibility.warnings.map((warn, i) => (
+                    <p key={i} className="text-sm font-bold text-amber-800 leading-relaxed">{warn}</p>
+                  ))}
                 </div>
-              </div>
+              )}
 
-              <div className="pt-2 border-t border-slate-100">
-                <h3 className="text-sm font900 text-slate-900 mb-3 mt-4">Thông báo Email</h3>
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between gap-3 rounded-2xl bg-white/85 p-4 text-sm font900 text-slate-800 ring-1 ring-slate-100">
-                    Báo cáo dinh dưỡng hàng tuần
-                    <input type="checkbox" defaultChecked className="h-5 w-5 rounded border-slate-300 text-emerald-600" onChange={handleMockSave} />
-                  </label>
-                  <label className="flex items-center justify-between gap-3 rounded-2xl bg-white/85 p-4 text-sm font900 text-slate-800 ring-1 ring-slate-100">
-                    Nhắc nhở cập nhật cân nặng
-                    <input type="checkbox" defaultChecked className="h-5 w-5 rounded border-slate-300 text-emerald-600" onChange={handleMockSave} />
-                  </label>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 mt-6">
-                <h3 className="text-sm font900 text-slate-900 mb-3 mt-4">Nhắc giờ ăn</h3>
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2 rounded-2xl bg-white/85 p-4 ring-1 ring-slate-100">
-                    <label className="flex items-center gap-2 text-sm font900 text-slate-800 cursor-pointer">
-                      <input name="meal_reminder_enabled" type="checkbox" checked={Boolean(profile?.meal_reminder_enabled ?? profile?.reminder_enabled ?? false)} className="h-5 w-5 flex-shrink-0 rounded border-slate-300 text-emerald-600" onChange={onChange} />
-                      <span className="w-36">Bật nhắc qua Email</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font900 text-slate-800 cursor-pointer">
-                      <input name="sms_reminder_enabled" type="checkbox" checked={Boolean(profile?.sms_reminder_enabled ?? false)} className="h-5 w-5 flex-shrink-0 rounded border-slate-300 text-emerald-600" onChange={onChange} />
-                      <span className="w-36">Bật nhắc qua SMS</span>
-                    </label>
+              {/* Biometrics Card */}
+              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100">
+                <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                   </div>
-
-                  {profile.sms_reminder_enabled && (
-                    <div>
-                      <ProfileField label="Số điện thoại nhận SMS" name="phone_number" type="tel" value={profile.phone_number || ""} error={errors.phone_number} onChange={onChange} placeholder="Ví dụ: 0912345678" />
-                      
-                      <div className="mt-3 flex items-center gap-3">
-                        <button
-                          type="button"
-                          className="h-10 rounded-xl bg-blue-600 px-4 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-700 transition"
-                          onClick={handleTestSms}
-                          disabled={smsTesting || !profile.phone_number}
-                        >
-                          {smsTesting ? "Đang gửi..." : "Test gửi SMS"}
-                        </button>
-                        {smsTestResult && (
-                          <span className={`text-sm font800 ${smsTestResult.success ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {smsTestResult.message}
-                            {smsTestResult.sent_to && ` (${smsTestResult.sent_to})`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(profile.meal_reminder_enabled || profile.sms_reminder_enabled) && (
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <ProfileField label="Giờ ăn sáng" name="breakfast_time" type="time" value={profile.breakfast_time || "07:00"} error={errors.breakfast_time} onChange={onChange} />
-                      <ProfileField label="Giờ ăn trưa" name="lunch_time" type="time" value={profile.lunch_time || "12:00"} error={errors.lunch_time} onChange={onChange} />
-                      <ProfileField label="Giờ ăn tối" name="dinner_time" type="time" value={profile.dinner_time || "18:30"} error={errors.dinner_time} onChange={onChange} />
-                    </div>
-                  )}
-
-                  <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-5">
-                    <button
-                      type="button"
-                      className="h-12 rounded-2xl bg-slate-700 px-6 text-sm font900 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-800 transition"
-                      onClick={onSaveProfile}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? "Đang lưu..." : "Lưu"}
-                    </button>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Chỉ số sinh học</h3>
+                    <p className="text-sm text-slate-500 font-semibold mt-1">Thông tin nền tảng để AI tính toán BMR & TDEE.</p>
                   </div>
                 </div>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <ProfileField label="Tuổi" name="age" type="number" min="1" max="120" value={profile.age} error={errors.age} onChange={onChange} />
+                  <ProfileSelect label="Giới tính" name="sex" value={profile.sex} error={errors.sex} onChange={onChange} options={[{ value: "", label: "Không chọn" }, { value: "male", label: "Nam" }, { value: "female", label: "Nữ" }]} />
+                  <ProfileField label="Chiều cao (cm)" name="height" type="number" min="100" max="230" value={profile.height} error={errors.height} onChange={onChange} />
+                  <ProfileField label="Cân nặng (kg)" name="weight" type="number" min="20" max="250" value={profile.weight} error={errors.weight} onChange={onChange} />
+                </div>
               </div>
 
+              {/* Goals Card */}
+              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                
+                <div className="relative z-10 flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Mục tiêu sức khoẻ</h3>
+                    <p className="text-sm text-slate-500 font-semibold mt-1">Tuỳ chỉnh lộ trình tăng cân của bạn.</p>
+                  </div>
+                </div>
+                <div className="relative z-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <ProfileField label="Cân nặng mục tiêu (kg)" name="target_weight" type="number" min="20" max="250" value={profile.target_weight || ""} error={errors.target_weight} onChange={onChange} />
+                  <ProfileField label="Thời gian mục tiêu" name="target_duration_value" type="number" min="1" value={profile.target_duration_value || ""} error={errors.target_duration_value} onChange={onChange} />
+                  <ProfileSelect label="Đơn vị thời gian" name="target_duration_unit" value={profile.target_duration_unit || "month"} error={errors.target_duration_unit} onChange={onChange} options={[{ value: "week", label: "Tuần" }, { value: "month", label: "Tháng" }]} />
+                  <ProfileSelect label="Mức độ vận động" name="activity" value={profile.activity} error={errors.activity} onChange={onChange} options={[{ value: "default", label: "Mặc định" }, { value: "sedentary", label: "Ít vận động" }, { value: "light", label: "Nhẹ" }, { value: "moderate", label: "Vừa phải" }, { value: "active", label: "Năng động" }, { value: "very_active", label: "Rất năng động" }]} />
+                  <ProfileSelect label="Tốc độ tăng cân" name="gain_speed" value={profile.gain_speed} error={errors.gain_speed} onChange={onChange} options={[{ value: "slow", label: "Nhẹ, ổn định" }, { value: "medium", label: "Vừa phải" }, { value: "fast", label: "Mạnh hơn" }]} />
+                </div>
+              </div>
+
+              {/* Diet & Nutrition Card */}
+              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative z-10 flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Dinh dưỡng & Thói quen</h3>
+                    <p className="text-sm text-slate-500 font-semibold mt-1">Thiết lập cách thuật toán AI gợi ý món ăn.</p>
+                  </div>
+                </div>
+                <div className="relative z-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+                  <ProfileSelect label="Chế độ ăn" name="diet_style" value={profile.diet_style} error={errors.diet_style} onChange={onChange} options={[{ value: "balanced", label: "Cân bằng" }, { value: "eat_clean", label: "Eat Clean" }, { value: "high_protein", label: "Giàu Protein" }, { value: "vegetarian", label: "Ăn chay" }]} />
+                  <ProfileSelect label="Ngân sách" name="budget_level" value={profile.budget_level} error={errors.budget_level} onChange={onChange} options={[{ value: "standard", label: "Tiêu chuẩn" }, { value: "low", label: "Tiết kiệm" }, { value: "high", label: "Cao cấp" }]} />
+                  <ProfileSelect label="Quy mô bữa ăn" name="meal_complexity" value={profile.meal_complexity} error={errors.meal_complexity} onChange={onChange} options={[{ value: "simple", label: "Đơn giản (3 món)" }, { value: "balanced", label: "Cân đối (4 món)" }, { value: "full", label: "Đầy đủ (5 món)" }]} />
+                </div>
+                <div className="relative z-10 grid gap-6 sm:grid-cols-2">
+                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                     <TagInput label="Món yêu thích" name="favorite_foods" value={profile.favorite_foods} error={errors.favorite_foods} onChange={onChange} helperText="Hệ thống sẽ ưu tiên gợi ý." placeholder="Ví dụ: chuối, sữa, trứng" />
+                  </div>
+                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                     <TagInput label="Danh sách loại trừ" name="unfavorite_foods" value={profile.unfavorite_foods} error={errors.unfavorite_foods} onChange={onChange} helperText="Hệ thống sẽ né các món này." placeholder="Ví dụ: tôm, đậu phộng" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Action Bar */}
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl p-4 bg-white/90 backdrop-blur-xl rounded-[24px] border border-slate-200/60 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] flex flex-wrap items-center justify-between gap-4 z-40">
+                <div className="px-3 hidden sm:block">
+                  <p className="text-[15px] font-black text-slate-900">Bản lưu thay đổi</p>
+                  <p className="text-[13px] font-bold text-slate-500">Nhớ lưu và tạo lại thực đơn mới nhé.</p>
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    className="flex-1 sm:flex-none h-14 rounded-xl bg-emerald-600 px-8 text-[15px] font-black tracking-wide text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={onSaveProfile}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "ĐANG LƯU..." : "LƯU THAY ĐỔI"}
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 sm:flex-none h-14 rounded-xl bg-emerald-600 px-8 text-[15px] font-black tracking-wide text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-500 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    onClick={onRegenerate}
+                    disabled={isSubmitting}
+                  >
+                    <svg className="w-5 h-5 hidden lg:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    {isSubmitting ? "ĐANG TẠO..." : "TẠO LẠI THỰC ĐƠN"}
+                  </button>
+                </div>
+              </div>
             </div>
-          </section>
-        )}
-      </div>
+          )}
+
+          {activeTab === 'preferences' && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100">
+                <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Giao diện & Thông báo</h3>
+                    <p className="text-sm text-slate-500 font-semibold mt-1">Cá nhân hoá trải nghiệm NutriGain của bạn.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <div>
+                    <h4 className="text-[15px] font-black text-slate-900 mb-4">Chủ đề ứng dụng</h4>
+                    <div className="flex gap-4">
+                      <button className="flex-1 rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 p-5 text-center transition">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 mx-auto mb-2 flex items-center justify-center"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></div>
+                        <span className="font-bold text-emerald-800 text-sm">Sáng (Light)</span>
+                      </button>
+                      <button onClick={handleMockSave} className="flex-1 rounded-2xl border-2 border-transparent bg-slate-50 hover:bg-slate-100 p-5 text-center transition">
+                         <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 mx-auto mb-2 flex items-center justify-center"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></div>
+                        <span className="font-bold text-slate-600 text-sm">Tối (Dark)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-8 border-t border-slate-100">
+                    <h4 className="text-[15px] font-black text-slate-900 mb-4">Nhắc nhở bữa ăn AI</h4>
+                    <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                      <label className="flex items-center gap-3 text-[15px] font-bold text-slate-800 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                        <input name="meal_reminder_enabled" type="checkbox" checked={Boolean(profile?.meal_reminder_enabled ?? profile?.reminder_enabled ?? false)} className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" onChange={onChange} />
+                        Nhắc nhở qua Email
+                      </label>
+                      <label className="flex items-center gap-3 text-[15px] font-bold text-slate-800 cursor-pointer p-2 hover:bg-white rounded-xl transition">
+                        <input name="sms_reminder_enabled" type="checkbox" checked={Boolean(profile?.sms_reminder_enabled ?? false)} className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" onChange={onChange} />
+                        Nhắc nhở qua SMS
+                      </label>
+
+                      {profile.sms_reminder_enabled && (
+                        <div className="mt-4 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                          <ProfileField label="Số điện thoại nhận SMS" name="phone_number" type="tel" value={profile.phone_number || ""} error={errors.phone_number} onChange={onChange} placeholder="Ví dụ: 0912345678" />
+                        </div>
+                      )}
+
+                      {(profile.meal_reminder_enabled || profile.sms_reminder_enabled) && (
+                        <div className="mt-6 pt-6 border-t border-slate-200 grid gap-4 sm:grid-cols-3">
+                          <ProfileField label="Ăn sáng" name="breakfast_time" type="time" value={profile.breakfast_time || "07:00"} error={errors.breakfast_time} onChange={onChange} />
+                          <ProfileField label="Ăn trưa" name="lunch_time" type="time" value={profile.lunch_time || "12:00"} error={errors.lunch_time} onChange={onChange} />
+                          <ProfileField label="Ăn tối" name="dinner_time" type="time" value={profile.dinner_time || "18:30"} error={errors.dinner_time} onChange={onChange} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                     <button
+                        type="button"
+                        className="h-14 w-full rounded-2xl bg-emerald-600 px-8 text-[15px] font-black tracking-wide text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
+                        onClick={onSaveProfile}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "ĐANG LƯU..." : "LƯU TUỲ CHỈNH"}
+                      </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100">
+                <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Bảo mật tài khoản</h3>
+                    <p className="text-sm text-slate-500 font-semibold mt-1">Bảo vệ dữ liệu cá nhân của bạn.</p>
+                  </div>
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <ProfileField label="Mật khẩu hiện tại" name="currentPassword" type="password" />
+                  <div className="hidden sm:block"></div>
+                  <ProfileField label="Mật khẩu mới" name="newPassword" type="password" />
+                  <ProfileField label="Xác nhận mật khẩu mới" name="confirmPassword" type="password" />
+                </div>
+                <div className="mt-8">
+                  <button
+                    type="button"
+                    onClick={handleMockSave}
+                    className="h-14 rounded-2xl bg-emerald-600 px-8 text-[15px] font-black text-white hover:bg-emerald-700 transition"
+                  >
+                    ĐỔI MẬT KHẨU
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
@@ -13147,4 +13215,7 @@ function round(value, digits = 0) {
   const factor = 10 ** digits;
   return Math.round(number * factor) / factor;
 }
+
+
+
 

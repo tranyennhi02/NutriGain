@@ -172,7 +172,7 @@ class RecommendationRepository:
         target_kcal = float(request_payload.get("target_calories") or request_payload.get("target_kcal") or 0.0)
 
         user_id_int = int(request_payload["user_id"])
-        today_date = datetime.utcnow().date()
+        today_date = self._today_local_date()  # Use local timezone instead of UTC
 
         # Mark ALL existing plans for today as superseded (preserves meal history)
         from app.models.entities import MealPlan, Meal, MealPlanItem, FoodLogItem, MealConsumptionLog, FoodLog
@@ -378,7 +378,7 @@ class RecommendationRepository:
         return request_row
 
     def mark_today_meal_plans_status(self, user_id: int, status: str) -> None:
-        today = datetime.utcnow().date()
+        today = self._today_local_date()  # Use local timezone instead of UTC
         rows = list(
             self.db.scalars(
                 select(MealPlan)

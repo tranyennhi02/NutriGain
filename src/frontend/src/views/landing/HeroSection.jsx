@@ -112,8 +112,7 @@ export default function HeroSection({ onShowAuth }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            NutriGain tự động tính BMI, BMR, TDEE và tạo thực đơn 3 bữa (sáng, trưa, tối) cá nhân hóa cho người gầy. 
-            AI nhận diện 26 nguyên liệu từ hình ảnh với độ chính xác 76%.
+            Hệ thống dinh dưỡng thông minh giúp bạn tăng cân khỏe mạnh với thực đơn cá nhân hóa và AI nhận diện thực phẩm.
           </motion.p>
           
           {/* CTA Buttons */}

@@ -956,6 +956,10 @@ INGREDIENT_ALIAS_GROUPS: dict[str, list[str]] = {
         "cua luoc", "cua hap", "cua rang me", "cua nuong",
         "cua xao", "cua chien", "ghe", "stone crab", "blue crab",
     ],
+    "tom": [
+        "tom", "shrimp", "prawn", "tom su", "tom he", "tom tuoi", "tom bien", "tom nuoc ngot", "thit tom",
+        "tom chin", "tom nuong", "tom luoc", "tom hap", "tom chien", "tom xao", "tom rang", "tom kho",
+    ],
     "orange": [
         "cam", "qua cam", "cam tuoi", "nuoc cam",
         "orange", "orange fruit", "fresh orange", "orange juice",
@@ -989,6 +993,7 @@ INGREDIENT_GROUP_ORDER = [
     "lamb",
     "sausage",
     "cua",
+    "tom",
     "fish",
     "orange",
     "egg",
@@ -1006,6 +1011,7 @@ INGREDIENT_GROUP_TO_MACRO: dict[str, str] = {
     "lamb": "protein",
     "sausage": "protein",
     "cua": "protein",
+    "tom": "protein",
     "fish": "protein",
     "egg": "protein",
     "orange": "fruit",
@@ -1023,6 +1029,7 @@ INGREDIENT_GROUP_TO_PRIMARY_CATEGORY: dict[str, str] = {
     "lamb": "protein_meat",
     "sausage": "protein_meat",
     "cua": "protein_seafood",
+    "tom": "protein_seafood",
     "fish": "protein_seafood",
     "orange": "fruit",
     "protein": "protein_meat",
@@ -1175,10 +1182,14 @@ def _ingredient_candidate_terms(raw_ingredient: object) -> list[str]:
         "cua": ["cua", "crab", "thit cua", "cua bien", "cua dong", "ghe", "stone crab", "blue crab"],
         "crab": ["cua", "crab", "thit cua", "cua bien", "cua dong", "ghe", "stone crab", "blue crab"],
         "thit cua": ["cua", "crab", "thit cua", "cua bien", "cua dong", "ghe"],
-        # ── Cá / Tôm ──────────────────────────────────────────────────────────
+        # ── Tôm (Shrimp) ──────────────────────────────────────────────────────
+        "tom": ["tom", "shrimp", "prawn", "tom su", "tom he", "tom tuoi", "tom bien", "tom nuoc ngot", "thit tom", "tom chin", "tom nuong", "tom luoc", "tom hap", "tom chien", "tom xao", "tom rang", "tom kho"],
+        "shrimp": ["tom", "shrimp", "prawn", "tom su", "tom he", "tom tuoi", "tom bien", "thit tom", "tom chin"],
+        "prawn": ["tom", "shrimp", "prawn", "tom su", "tom he", "tom tuoi", "thit tom"],
+        "thit tom": ["tom", "shrimp", "prawn", "thit tom", "tom bien", "tom tuoi"],
+        # ── Cá / Fish ──────────────────────────────────────────────────────────
         "tao": ["nuoc tao", "banh tao", "banh strudel tao", "banh sung bo tao"],
         "ca": ["ca hoi", "ca ngu", "ca thu", "ca trang", "ca bong", "ca loc"],
-        "tom": ["shrimp", "prawn"],
         # ── Chuối / Banana ────────────────────────────────────────────────────
         # "bò" → "thịt bò", "gà" → "ức gà", "chuối" → "chuối sứ", "sữa" → "sữa tươi"
         "chuoi": ["chuoi", "chuoi su", "chuoi tieu", "chuoi gia", "chuoi mat", "chuoi cat", "banana", "chuoi xanh", "chuoi chin"],
@@ -1350,6 +1361,14 @@ def _is_cua_ingredient(ingredient: object) -> bool:
     if not key:
         return False
     return any(token in key for token in ("cua", "crab", "thit cua", "cua bien", "cua dong"))
+
+
+def _is_tom_ingredient(ingredient: object) -> bool:
+    """Check if ingredient is shrimp/prawn (tôm)"""
+    key = normalize_text_vi(ingredient)
+    if not key:
+        return False
+    return any(token in key for token in ("tom", "shrimp", "prawn", "thit tom", "tom su", "tom he", "tom bien"))
 
 
 def is_primary_meat_name(food: object, ingredient: object) -> bool:
@@ -2020,6 +2039,16 @@ def ingredient_match_quality(food: object, ingredient: object) -> float:
                 return 2.0
             return 1.0
 
+        if _is_tom_ingredient(ingredient_key) or ingredient_group == "tom":
+            # Special handling for shrimp/prawn (tôm)
+            if core_match and candidate_category in {"protein_seafood", "seafood", "protein_meat", "animal_protein", "protein"}:
+                return 3.0
+            if core_match:
+                return 2.0
+            if alias_hit:
+                return 2.0  # Even without core_match, alias_hit is enough for tom
+            return 1.0
+
         if is_egg_dish and is_meat_ingredient:
             if _debug_recommender_enabled():
                 _debug_print("[INGREDIENT MATCH QUALITY DEBUG]", {
@@ -2490,7 +2519,20 @@ def _limit_ranked_candidate_pool(
                         [ingredient_matched_candidates, _fallback_rows], ignore_index=False
                     ).drop_duplicates(subset=["food_id"] if "food_id" in ranked_sorted.columns else None, keep="first")
             preserved_required_count = int(len(ingredient_matched_candidates))
-            if not ingredient_matched_candidates.empty:
+            
+            # ===== FIX: Nếu không tìm thấy món nào match, log warning và KHÔNG filter =====
+            if ingredient_matched_candidates.empty:
+                logger.warning(
+                    "[REQUIRED INGREDIENT WARNING] No foods found matching required ingredients: %s. "
+                    "Continuing with full candidate pool (ingredient preference will be ignored).",
+                    normalized_ingredients,
+                )
+                print("[REQUIRED INGREDIENT WARNING - NO MATCH]", {
+                    "required_ingredients": normalized_ingredients,
+                    "action": "continuing_with_full_pool",
+                }, flush=True)
+            # ===== END FIX =====
+            elif not ingredient_matched_candidates.empty:
                 if _debug_recommender_enabled():
                     for ingredient in normalized_ingredients:
                         ingredient_rows = ranked_sorted[
@@ -2937,6 +2979,85 @@ def find_best_candidate_for_required_ingredient(
         pool = weak_matched
         if pool:
             _debug_print("[REQUIRED INGREDIENT WEAK FALLBACK]", {"ingredient": ingredient_key, "count": len(pool)})
+    
+    # ENHANCED FALLBACK: If still no match, try relaxed matching with broader criteria
+    if not pool:
+        logger.warning("[REQUIRED INGREDIENT ENHANCED FALLBACK] No strong match, trying relaxed criteria: ingredient=%s", ingredient_key)
+        
+        # Fallback strategy 1: Try group-based matching (beef → any beef dishes)
+        ingredient_group = get_ingredient_group(ingredient_key)
+        relaxed_matched: list[tuple[float, int, int, float, object]] = []
+        
+        for candidate in _iter_candidate_items(candidate_pool):
+            try:
+                # Skip if already in current plan
+                candidate_food_id = safe_text(safe_get(candidate, "food_id", ""))
+                candidate_name = normalize_text_vi(safe_name(candidate))
+                if candidate_food_id and candidate_food_id in current_food_ids:
+                    continue
+                if candidate_name and candidate_name in current_food_names:
+                    continue
+                
+                # Get candidate category and food group
+                candidate_cat = safe_category(candidate) or ""
+                candidate_group = safe_food_group(candidate) or ""
+                candidate_name_lower = candidate_name.lower() if candidate_name else ""
+                
+                # Group-based matching
+                relaxed_match = False
+                relaxed_score = 0.5  # Lower score for relaxed matches
+                
+                if ingredient_group == "beef":
+                    if any(term in candidate_name_lower for term in ["bò", "beef", "bo "]) or \
+                       any(term in normalize_ingredient_name(candidate_cat + " " + candidate_group) for term in ["beef", "bo"]):
+                        relaxed_match = True
+                        relaxed_score = 1.5
+                elif ingredient_group == "pork":
+                    if any(term in candidate_name_lower for term in ["lợn", "heo", "pork"]) or \
+                       any(term in normalize_ingredient_name(candidate_cat + " " + candidate_group) for term in ["pork", "lon", "heo"]):
+                        relaxed_match = True
+                        relaxed_score = 1.5
+                elif ingredient_group == "chicken":
+                    if any(term in candidate_name_lower for term in ["gà", "chicken", "ga "]) or \
+                       any(term in normalize_ingredient_name(candidate_cat + " " + candidate_group) for term in ["chicken", "ga"]):
+                        relaxed_match = True
+                        relaxed_score = 1.5
+                elif ingredient_group == "fish":
+                    if any(term in candidate_name_lower for term in ["cá", "fish", "ca "]) or \
+                       any(term in normalize_ingredient_name(candidate_cat + " " + candidate_group) for term in ["fish", "ca", "seafood"]):
+                        relaxed_match = True
+                        relaxed_score = 1.5
+                elif ingredient_group == "shrimp":
+                    if any(term in candidate_name_lower for term in ["tôm", "tom", "shrimp"]) or \
+                       any(term in normalize_ingredient_name(candidate_cat + " " + candidate_group) for term in ["shrimp", "tom"]):
+                        relaxed_match = True
+                        relaxed_score = 1.5
+                elif ingredient_group == "egg":
+                    if any(term in candidate_name_lower for term in ["trứng", "trung", "egg"]) or \
+                       any(term in normalize_ingredient_name(candidate_cat + " " + candidate_group) for term in ["egg", "trung"]):
+                        relaxed_match = True
+                        relaxed_score = 1.5
+                
+                if not relaxed_match:
+                    continue
+                
+                # Score the relaxed match
+                candidate_rank = _ingredient_candidate_rank(candidate, ingredient_key)
+                score_value = safe_score(candidate)
+                kcal_value = safe_calories(candidate)
+                has_valid_kcal = 1 if float(kcal_value) > 0 else 0
+                
+                bucket = (relaxed_score, 0, 0, candidate_rank[0], candidate_rank[1], candidate_rank[2], 0, 0, 0, has_valid_kcal, score_value, 0.0, candidate)
+                relaxed_matched.append(bucket)
+            except Exception:
+                continue
+        
+        if relaxed_matched:
+            pool = relaxed_matched
+            logger.info("[REQUIRED INGREDIENT RELAXED FALLBACK SUCCESS] Found %d relaxed matches for ingredient=%s", len(pool), ingredient_key)
+        else:
+            logger.error("[REQUIRED INGREDIENT NO FALLBACK] No matches found even with relaxed criteria: ingredient=%s", ingredient_key)
+    
     if not pool:
         return None
 
@@ -5881,6 +6002,15 @@ class RecommenderService:
         normalized_diet = _normalize_search_text(diet_type or "balanced")
         if ranked.empty:
             return ranked
+        
+        # CRITICAL FIX: If user provides ANY required ingredients, SKIP diet filtering entirely
+        # This ensures user can get meals with their available ingredients regardless of diet preferences
+        logger.info("[DIET FILTER DEBUG] diet_type=%s, user_required_ingredients=%s, len=%s", 
+                   diet_type, user_required_ingredients, len(user_required_ingredients or []))
+        if user_required_ingredients and len(user_required_ingredients) > 0:
+            logger.info("[DIET FILTER BYPASSED] User provided ingredients - allowing all foods: %s", user_required_ingredients)
+            return ranked
+        
         if _is_vegetarian_diet(normalized_diet):
             return ranked[~ranked.apply(_is_animal_meat_or_seafood_row, axis=1)].copy()
         if _is_vegan_diet(normalized_diet):
@@ -8679,6 +8809,7 @@ class RecommenderService:
             "normalized": available_ingredients,
             "groups": [get_ingredient_group(item) for item in available_ingredients],
         }, flush=True)
+        
         if _debug_recommender_enabled() and available_ingredients:
             try:
                 all_foods = getattr(recommender, "raw_df", None)
@@ -8744,6 +8875,8 @@ class RecommenderService:
             diet_type=getattr(payload, "diet_type", None) or getattr(payload, "diet_style", None) or getattr(saved_profile, "diet_type", None),
             items_per_meal=getattr(payload, "items_per_meal", None),
             user_id=getattr(user, "id", None),
+            available_ingredients=tuple(available_ingredients) if available_ingredients else (),
+            required_ingredients=tuple(available_ingredients) if available_ingredients else (),
         )
         _debug_print("[RECOMMENDER FINAL PROFILE USED]", {
             "user_id": user.id,
@@ -9041,6 +9174,32 @@ class RecommenderService:
                 logger.warning("Food eligibility ML scoring skipped; using rule-based ranking: %s", exc)
         ranked = self._apply_budget_score_adjustments(ranked, payload.budget_level, strength=0.45)
         ranked = self._apply_natural_food_score_adjustments(ranked, strength=0.35)
+        
+        # CALORIE BOOST WHEN USER PROVIDES INGREDIENTS:
+        # When user selects required ingredients, they bypass diet filter (e.g. vegetarian can select shrimp).
+        # However, the base score still favors low-calorie vegetarian foods, causing the meal plan to fall short of target kcal.
+        # Solution: Apply a moderate calorie boost to high-calorie items (>= 200 kcal) to ensure they get selected.
+        if available_ingredients and not ranked.empty:
+            try:
+                food_calories = ranked.apply(
+                    lambda row: float(
+                        row.get("calories_raw") or 
+                        row.get("kcal_per_serving_clean") or 
+                        row.get("calories") or 
+                        0
+                    ),
+                    axis=1,
+                )
+                HIGH_CALORIE_THRESHOLD = 200.0
+                CALORIE_BOOST = 0.12  # 12% boost for high-calorie items
+                calorie_boost = (food_calories >= HIGH_CALORIE_THRESHOLD).astype(float) * CALORIE_BOOST
+                ranked["score"] = ranked["score"].astype(float) + calorie_boost
+                ranked = ranked.sort_values("score", ascending=False)
+                logger.info("[CALORIE BOOST APPLIED] When user provides ingredients, boost high-cal items (>=%d kcal) by +%.0f%% to reach target", 
+                            HIGH_CALORIE_THRESHOLD, CALORIE_BOOST * 100)
+            except Exception as exc:
+                logger.warning("[CALORIE BOOST FAILED] %s", repr(exc))
+        
         _record_timing(timing, "score_candidates_ms", score_candidates_start)
 
         ingredient_preference_start = time.perf_counter()
@@ -9056,12 +9215,16 @@ class RecommenderService:
                 ranked["ingredient_match_count"] = match_counts.astype(int)
                 
                 # CALORIE-AWARE INGREDIENT PREFERENCE:
-                # When user provides low-calorie ingredients, we must balance by:
-                # 1. Including the low-cal ingredient items (with moderate boost)
-                # 2. Also selecting high-calorie items WITHOUT those ingredients (to reach calorie target)
+                # When user provides ingredients (especially required ones), we need to:
+                # 1. Ensure ingredient-matched items appear in plan (with bonus)
+                # 2. Also include HIGH-CALORIE items (even if they don't match ingredients) to reach kcal target
                 # 
-                # Strategy: Apply SMALLER bonus to low-calorie matched items (< 150 kcal)
-                # so they don't dominate the ranking, leaving room for high-calorie supplementary items.
+                # Problem: If we only boost matched items, and matched items are low-cal (e.g. vegetables),
+                # the plan will be dominated by low-cal items and fall short of target kcal.
+                # 
+                # Solution: Apply TWO types of bonuses:
+                # A. Ingredient match bonus (for items matching user's selected ingredients)
+                # B. General high-calorie bonus (applied earlier, outside this block)
                 if match_counts.any():
                     # Get calorie values for each food item
                     food_calories = ranked.apply(
@@ -9074,20 +9237,20 @@ class RecommenderService:
                         axis=1
                     )
                     
-                    # Define calorie threshold: items below this are considered "low-calorie"
-                    # LOWERED from 150 to 100 to give more items full boost
+                    # Define calorie threshold: items below this get REDUCED bonus
                     LOW_CALORIE_THRESHOLD = 100.0
                     
                     # Calculate adaptive bonus:
                     # - High-calorie matched items: full bonus (18%)
-                    # - Low-calorie matched items: NO BONUS (0%) to prevent them from dominating
-                    #   They will still appear in the plan due to base score, but won't push out high-cal items
-                    # - Non-matched items: no bonus (but can still be selected if they have high base score)
+                    # - Low-calorie matched items: smaller bonus (9%) to prevent dominating
+                    # - Non-matched items: no bonus here (but already got calorie boost earlier if >= 200 kcal)
                     ingredient_bonus = ranked.apply(
                         lambda row: (
-                            INGREDIENT_PREFERENCE_BONUS * row["ingredient_match_count"]  # Full bonus for high-cal
+                            INGREDIENT_PREFERENCE_BONUS * row["ingredient_match_count"]  # Full bonus for high-cal matched
                             if row["ingredient_match_count"] > 0 and food_calories[row.name] >= LOW_CALORIE_THRESHOLD
-                            else 0.0  # NO bonus for low-cal or non-matches
+                            else (INGREDIENT_PREFERENCE_BONUS * 0.5 * row["ingredient_match_count"]  # Half bonus for low-cal matched
+                                  if row["ingredient_match_count"] > 0
+                                  else 0.0)  # No bonus for non-matched (they may have calorie boost already)
                         ),
                         axis=1
                     )
@@ -9381,7 +9544,7 @@ class RecommenderService:
         # we must ensure the meal plan reaches 100% of target calories (no shortage allowed).
         # Otherwise users can't meet their nutrition goals even after selecting all suggested items.
         has_required_ingredients = bool(normalized_available_ingredients)
-        min_kcal_threshold = 0.98 if has_required_ingredients else 0.88  # 98% = effectively 100% with rounding
+        min_kcal_threshold = 1.00 if has_required_ingredients else 0.88  # 100% when user provides ingredients
         
         # Only rebalance if CORE items deficit is significant
         if target_kcal > 0 and core_kcal < target_kcal * min_kcal_threshold:
@@ -9465,8 +9628,8 @@ class RecommenderService:
                         })
             
             # If still deficit in core kcal, try adding high-calorie CORE items from ranked candidates
-            # IMPORTANT: For required_ingredients, be VERY aggressive (add items even at 2% deficit)
-            aggressive_threshold = 0.02 if has_required_ingredients else 0.05
+            # IMPORTANT: For required_ingredients, be VERY aggressive (add items even at 0% deficit to ensure 100% target)
+            aggressive_threshold = 0.00 if has_required_ingredients else 0.05
             if deficit > target_kcal * aggressive_threshold and not ranked.empty:
                 logger.info("[MEAL_CALORIE_ADD_ITEMS_START] deficit=%.1f kcal, has_required_ingredients=%s", deficit, has_required_ingredients)
                 
@@ -13896,8 +14059,60 @@ class RecommenderService:
                     if "ingredientWarnings" not in response_payload:
                         response_payload["ingredientWarnings"] = {}
                     
+                    # Build helpful suggestion message based on missing ingredients
+                    def _build_ingredient_suggestion(ingredient: str) -> str:
+                        """Generate helpful suggestion for missing ingredient"""
+                        ingredient_norm = normalize_ingredient_name(ingredient)
+                        ing_group = get_ingredient_group(ingredient_norm)
+                        
+                        # Group-based suggestions
+                        suggestions = {
+                            "beef": "thịt bò thăn, bò bắp, sườn bò",
+                            "pork": "thịt lợn vai, thịt ba chỉ, sườn lợn",
+                            "chicken": "ức gà, đùi gà, cánh gà",
+                            "fish": "cá hồi, cá ngừ, cá rô phi",
+                            "shrimp": "tôm sú, tôm càng, tôm thẻ",
+                            "cua": "cua biển, ghẹ, thịt cua đóng hộp",
+                            "egg": "trứng gà, trứng vịt, trứng cút",
+                            "milk": "sữa tươi, sữa chua, phô mai",
+                            "vegetable": "rau cải, bông cải, cà chua",
+                            "fruit": "chuối, táo, cam",
+                        }
+                        
+                        suggestion = suggestions.get(ing_group)
+                        if suggestion:
+                            return f"{ingredient} (Thử: {suggestion})"
+                        return ingredient
+                    
+                    suggested_ingredients = [_build_ingredient_suggestion(ing) for ing in final_unavailable]
+                    
                     response_payload["ingredientWarnings"]["missingIngredients"] = final_unavailable
-                    response_payload["ingredientWarnings"]["message"] = f"Chưa tìm được món phù hợp cho: {', '.join(final_unavailable)}"
+                    response_payload["ingredientWarnings"]["message"] = (
+                        f"Không tìm thấy món ăn phù hợp trong cơ sở dữ liệu cho: {', '.join(suggested_ingredients)}. "
+                        f"Vui lòng thử:\n"
+                        f"• Nhập tên cụ thể hơn (ví dụ: 'Ức gà' thay vì 'Thịt gà')\n"
+                        f"• Chọn nguyên liệu khác có trong hệ thống\n"
+                        f"• Kiểm tra chính tả"
+                    )
+                    response_payload["ingredientWarnings"]["suggestions"] = [
+                        {
+                            "ingredient": ing,
+                            "suggestion": _build_ingredient_suggestion(ing),
+                            "group": get_ingredient_group(normalize_ingredient_name(ing)),
+                        }
+                        for ing in final_unavailable
+                    ]
+                    
+                    # Log detailed debug info for developers
+                    logger.error("[INGREDIENT MISSING DEBUG] Ingredient not found in catalog: %s", {
+                        "missingIngredients": final_unavailable,
+                        "catalogChecked": bool(candidates_by_ingredient),
+                        "availableCandidates": {
+                            ing: len(candidates_by_ingredient.get(str(ing), []))
+                            for ing in final_unavailable
+                        },
+                        "suggestedAlternatives": suggested_ingredients,
+                    })
         
         # Handle missing injected items (non-selected ingredients)
         if missing_injected_in_response:

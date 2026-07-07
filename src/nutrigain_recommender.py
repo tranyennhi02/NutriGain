@@ -783,6 +783,8 @@ class UserProfile:
     diet_type: str | None = None
     items_per_meal: int | None = None
     user_id: int | None = None
+    available_ingredients: tuple[str, ...] = ()
+    required_ingredients: tuple[str, ...] = ()
 
 
 class HealthyWeightGainRecommender:
@@ -2184,10 +2186,17 @@ class HealthyWeightGainRecommender:
         all_scores = cosine_similarity(user_vector, self.feature_matrix).ravel()
 
         diet_type_str = getattr(profile, "diet_type", None)
+        available_ingredients = getattr(profile, "available_ingredients", ())
+        required_ingredients = getattr(profile, "required_ingredients", ())
+        has_user_ingredients = (available_ingredients and len(available_ingredients) > 0) or (required_ingredients and len(required_ingredients) > 0)
+        
         print("[VEGETARIAN FILTER INPUT]", {
             "user_id": getattr(profile, "user_id", None),
             "diet_type": diet_type_str,
             "items_per_meal": getattr(profile, "items_per_meal", None),
+            "has_user_ingredients": has_user_ingredients,
+            "available_ingredients": list(available_ingredients) if available_ingredients else [],
+            "required_ingredients": list(required_ingredients) if required_ingredients else [],
         })
 
         all_foods = self.merged_df.copy()
@@ -2195,7 +2204,11 @@ class HealthyWeightGainRecommender:
 
         after_eligible = all_foods.copy()
 
-        if str(diet_type_str).strip().lower() in {"vegetarian", "vegan", "ăn chay", "an chay", "vegetarianism"}:
+        # Bypass diet filter if user provided required/available ingredients
+        if has_user_ingredients:
+            print("[DIET FILTER BYPASSED] User provided ingredients - allowing all foods including seafood/meat")
+            after_vegetarian = after_eligible.copy()
+        elif str(diet_type_str).strip().lower() in {"vegetarian", "vegan", "ăn chay", "an chay", "vegetarianism"}:
             veg_mask = after_eligible.apply(is_non_vegetarian_food, axis=1)
             after_vegetarian = after_eligible[~veg_mask].copy()
             if after_vegetarian.empty:

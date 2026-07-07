@@ -6,14 +6,27 @@
  */
 
 import storageManager from './StorageManager.js';
+import { getSession } from '../../services/authService.js';
 
 class ProgressTracker {
   constructor() {
-    this.KEYS = {
+    // Base keys
+    this.BASE_KEYS = {
       LESSON_PROGRESS: 'lesson_progress',
       COMPLETED_LESSONS: 'completed_lessons',
       TOTAL_XP: 'total_xp',
       SIDEBAR_COLLAPSED: 'sidebar_collapsed'
+    };
+  }
+
+  get KEYS() {
+    const session = getSession();
+    const prefix = session?.email ? `${session.email}_` : '';
+    return {
+      LESSON_PROGRESS: `${prefix}${this.BASE_KEYS.LESSON_PROGRESS}`,
+      COMPLETED_LESSONS: `${prefix}${this.BASE_KEYS.COMPLETED_LESSONS}`,
+      TOTAL_XP: `${prefix}${this.BASE_KEYS.TOTAL_XP}`,
+      SIDEBAR_COLLAPSED: `${prefix}${this.BASE_KEYS.SIDEBAR_COLLAPSED}`
     };
   }
 

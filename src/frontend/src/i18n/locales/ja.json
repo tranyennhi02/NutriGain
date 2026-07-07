@@ -1,4 +1,32 @@
 {
+  "sidebar": {
+    "workspace": "Workspace",
+    "overview": "概要",
+    "mealPlan": "食事プラン",
+    "journal": "栄養日誌",
+    "charts": "体重増加トラッカー",
+    "chartsWeight": "体重トラッカー",
+    "achievements": "実績",
+    "healthEducation": "健康教育",
+    "notifications": "通知",
+    "account": "アカウント",
+    "help": "サポート",
+    "logout": "ログアウト",
+    "liveTracking": "ライブトラッキング",
+    "closeMenu": "メニューを閉じる",
+    "openMenu": "メニューを開く",
+    "goToOverview": "概要へ移動"
+  },
+  "app": {
+    "logoutConfirmTitle": "サインアウトの確認",
+    "logoutConfirmDesc": "アカウントからサインアウトしますか？",
+    "logoutButton": "サインアウト",
+    "cancelButton": "キャンセル",
+    "loadingAccount": "アカウント情報を読み込んでいます...",
+    "loadFailedTitle": "アカウント情報を読み込めませんでした。",
+    "loadFailedDesc": "再読み込みするかサインアウトして再ログインしてください。",
+    "reload": "再読み込み"
+  },
   "common": {
     "appName": "NutriGain",
     "loading": "読み込み中...",
@@ -106,6 +134,7 @@
   },
   "language": {
     "selectLanguage": "言語を選択",
+    "selectSubtitle": "表示言語を選んでください",
     "vietnamese": "Tiếng Việt",
     "english": "English",
     "japanese": "日本語"
@@ -127,7 +156,35 @@
     },
     "auth": {
       "login": "ログイン",
-      "register": "登録"
+      "register": "登録",
+      "welcomeBack": "お帰りなさい",
+      "getStarted": "栄養プランの作成を始める",
+      "loginSubtitle": "ログインして栄養プランを続行",
+      "orLoginWith": "またはメールでログイン",
+      "loginWithGoogle": "Googleで続行",
+      "email": "メールアドレス",
+      "emailPlaceholder": "email@example.com",
+      "password": "パスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "fullName": "氏名",
+      "fullNamePlaceholder": "氏名",
+      "confirmPassword": "パスワード（確認）",
+      "forgotPassword": "パスワードを忘れた場合",
+      "createAccount": "アカウント作成",
+      "loggingIn": "ログイン中...",
+      "creatingAccount": "アカウント作成中...",
+      "haveAccount": "すでにアカウントをお持ちですか？",
+      "noAccount": "アカウントをお持ちでないですか？",
+      "backToHome": "ホームに戻る",
+      "checkEmail": "メールを確認してください",
+      "verifyCodeSent": "NutriGainは{{email}}に6桁の認証コードを送信しました。登録を完了するにはコードを入力してください。",
+      "verifyEmail": "メールを認証",
+      "verifying": "認証中...",
+      "verificationCode": "認証コード",
+      "verificationCodePlaceholder": "認証コードを入力",
+      "resendCode": "コードを再送信",
+      "changeEmail": "メールアドレスを変更",
+      "registerFree": "無料で登録"
     }
   }
 }

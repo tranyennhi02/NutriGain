@@ -1,4 +1,32 @@
 {
+  "sidebar": {
+    "workspace": "Workspace",
+    "overview": "Tổng quan",
+    "mealPlan": "Kế hoạch bữa ăn",
+    "journal": "Thống kê ăn uống",
+    "charts": "Theo dõi tăng cân",
+    "chartsWeight": "Theo dõi cân nặng",
+    "achievements": "Thành tích",
+    "healthEducation": "Giáo dục sức khỏe",
+    "notifications": "Thông báo",
+    "account": "Tài khoản",
+    "help": "Hỗ trợ",
+    "logout": "Đăng xuất",
+    "liveTracking": "Đang theo dõi",
+    "closeMenu": "Đóng menu",
+    "openMenu": "Mở menu",
+    "goToOverview": "Về trang tổng quan"
+  },
+  "app": {
+    "logoutConfirmTitle": "Xác nhận đăng xuất",
+    "logoutConfirmDesc": "Bạn có chắc muốn đăng xuất khỏi tài khoản?",
+    "logoutButton": "Đăng xuất",
+    "cancelButton": "Hủy",
+    "loadingAccount": "Đang tải thông tin...",
+    "loadFailedTitle": "Không thể tải thông tin tài khoản.",
+    "loadFailedDesc": "Vui lòng tải lại hoặc đăng xuất để đăng nhập lại.",
+    "reload": "Tải lại"
+  },
   "common": {
     "appName": "NutriGain",
     "loading": "Đang tải...",
@@ -421,6 +449,7 @@
   },
   "language": {
     "selectLanguage": "Chọn ngôn ngữ",
+    "selectSubtitle": "Chọn ngôn ngữ hiển thị ưa thích của bạn",
     "vietnamese": "Tiếng Việt",
     "english": "English",
     "japanese": "日本語"
@@ -447,16 +476,30 @@
       "getStarted": "Bắt đầu xây dựng kế hoạch dinh dưỡng của bạn",
       "loginSubtitle": "Đăng nhập để tiếp tục kế hoạch dinh dưỡng của bạn",
       "orLoginWith": "hoặc đăng nhập bằng email",
-      "loginWithGoogle": "Đăng nhập bằng Google",
+      "loginWithGoogle": "Tiếp tục với Google",
       "email": "Email",
+      "emailPlaceholder": "email@example.com",
       "password": "Mật khẩu",
+      "passwordPlaceholder": "Nhập mật khẩu",
       "fullName": "Họ và tên",
+      "fullNamePlaceholder": "Họ và tên",
+      "confirmPassword": "Nhập lại mật khẩu",
+      "forgotPassword": "Quên mật khẩu?",
       "createAccount": "Tạo tài khoản",
       "loggingIn": "Đang đăng nhập...",
       "creatingAccount": "Đang tạo tài khoản...",
       "haveAccount": "Đã có tài khoản?",
       "noAccount": "Chưa có tài khoản?",
-      "backToHome": "Quay lại trang chủ"
+      "backToHome": "Quay lại trang chủ",
+      "checkEmail": "Kiểm tra email của bạn",
+      "verifyCodeSent": "NutriGain đã gửi mã xác thực 6 số đến {{email}}. Nhập mã để hoàn tất đăng ký.",
+      "verifyEmail": "Xác thực email",
+      "verifying": "Đang xác thực...",
+      "verificationCode": "Mã xác thực",
+      "verificationCodePlaceholder": "Nhập mã xác thực",
+      "resendCode": "Gửi lại mã",
+      "changeEmail": "Đổi email",
+      "registerFree": "Đăng ký miễn phí"
     },
     "features": {
       "sectionLabel": "Tính năng",

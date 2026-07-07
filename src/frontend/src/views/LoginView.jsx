@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { defaultLoginState } from "../models/authModel";
 import AuthCard from "./landing/AuthCard";
@@ -13,6 +14,7 @@ import NutriGainLogo from "../components/NutriGainLogo";
 import { register, resendVerification, verifyEmail } from "../services/authService";
 
 export default function LoginView({ onAuthSuccess, initialMode = null, onForgotPassword }) {
+  const { t } = useTranslation();
   // null = landing page, "login" | "register" = show auth modal/overlay
   const [authMode, setAuthMode] = useState(initialMode);
   const [serverError, setServerError] = useState("");
@@ -243,7 +245,7 @@ export default function LoginView({ onAuthSuccess, initialMode = null, onForgotP
           <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
             <button onClick={() => setAuthMode(null)} className="flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-emerald-600">
               <ArrowLeftIcon />
-              Quay lại trang chủ
+              {t('landing.auth.backToHome')}
             </button>
             <NutriGainLogo size="sm" />
           </div>

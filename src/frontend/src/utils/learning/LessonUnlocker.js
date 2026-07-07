@@ -7,31 +7,16 @@
 
 class LessonUnlocker {
   /**
-   * Check if a lesson is unlocked
+   * Check if a lesson is unlocked based on XP
    * @param {string} lessonId - The lesson ID to check
    * @param {Array} categories - Array of category objects with lessons
    * @param {Set<string>} completedLessons - Set of completed lesson IDs
+   * @param {number} totalXP - User's total XP earned
    * @returns {boolean} True if lesson is unlocked
    */
-  isLessonUnlocked(lessonId, categories, completedLessons) {
-    // Find the lesson and its position in its category
-    for (const category of categories) {
-      const lessonIndex = category.lessons.findIndex(lesson => lesson.id === lessonId);
-      
-      if (lessonIndex !== -1) {
-        // First lesson in each category is always unlocked
-        if (lessonIndex === 0) {
-          return true;
-        }
-        
-        // Check if previous lesson is completed
-        const previousLesson = category.lessons[lessonIndex - 1];
-        return completedLessons.has(previousLesson.id);
-      }
-    }
-    
-    // Lesson not found, consider it locked
-    return false;
+  isLessonUnlocked(lessonId, categories, completedLessons, totalXP = 0) {
+    // All lessons are unlocked - free access for all users
+    return true;
   }
 
   /**
@@ -67,12 +52,19 @@ class LessonUnlocker {
    * @returns {string} Unlock requirements message
    */
   getUnlockRequirements(lessonId, categories) {
-    for (const category of categories) {
-      const lessonIndex = category.lessons.findIndex(lesson => lesson.id === lessonId);
+    for (let catIndex = 0; catIndex < categories.length; catIndex++) {
+      const category = categories[catIndex];
+      const lessonIndex = category.lessons.findIndex(l => l.id === lessonId);
       
-      if (lessonIndex !== -1 && lessonIndex > 0) {
-        const previousLesson = category.lessons[lessonIndex - 1];
-        return `Hoàn thành bài học "${previousLesson.title}" để mở khóa`;
+      if (lessonIndex !== -1) {
+        if (lessonIndex === 0 && catIndex > 0) {
+          const prevCategory = categories[catIndex - 1];
+          const previousLesson = prevCategory.lessons[prevCategory.lessons.length - 1];
+          return `Hoàn thành bài học "${previousLesson.title}" để mở khóa`;
+        } else if (lessonIndex > 0) {
+          const previousLesson = category.lessons[lessonIndex - 1];
+          return `Hoàn thành bài học "${previousLesson.title}" để mở khóa`;
+        }
       }
     }
     
@@ -116,14 +108,15 @@ class LessonUnlocker {
    * Get all unlocked lesson IDs
    * @param {Array} categories - Array of category objects with lessons
    * @param {Set<string>} completedLessons - Set of completed lesson IDs
+   * @param {number} totalXP - User's total XP earned
    * @returns {Set<string>} Set of unlocked lesson IDs
    */
-  getAllUnlockedLessons(categories, completedLessons) {
+  getAllUnlockedLessons(categories, completedLessons, totalXP = 0) {
     const unlocked = new Set();
     
     categories.forEach(category => {
       category.lessons.forEach((lesson, index) => {
-        if (this.isLessonUnlocked(lesson.id, categories, completedLessons)) {
+        if (this.isLessonUnlocked(lesson.id, categories, completedLessons, totalXP)) {
           unlocked.add(lesson.id);
         }
       });

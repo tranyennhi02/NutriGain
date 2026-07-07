@@ -5,20 +5,22 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Lock, Unlock, Check, BookOpen, Apple, Scale } from 'lucide-react';
+import { ChevronDown, ChevronRight, Lock, Unlock, Check, BookOpen, Apple, Scale, Activity } from 'lucide-react';
 import lessonUnlocker from '../../utils/learning/LessonUnlocker.js';
 import progressTracker from '../../utils/learning/ProgressTracker.js';
 
 const iconMap = {
   BookOpen,
   Apple,
-  Scale
+  Scale,
+  Activity
 };
 
 export default function LessonPanel({
   categories,
   selectedLesson,
   completedLessons,
+  totalXP,
   onLessonSelect,
   collapsed,
   onToggleCollapse
@@ -55,7 +57,7 @@ export default function LessonPanel({
   };
 
   const handleLessonClick = (lessonId) => {
-    const isUnlocked = lessonUnlocker.isLessonUnlocked(lessonId, categories, completedLessons);
+    const isUnlocked = lessonUnlocker.isLessonUnlocked(lessonId, categories, completedLessons, totalXP);
     
     if (!isUnlocked) {
       const message = lessonUnlocker.getUnlockRequirements(lessonId, categories);
@@ -120,7 +122,8 @@ export default function LessonPanel({
                       const isUnlocked = lessonUnlocker.isLessonUnlocked(
                         lesson.id,
                         categories,
-                        completedLessons
+                        completedLessons,
+                        totalXP
                       );
                       const isCompleted = completedLessons.has(lesson.id);
                       const isSelected = selectedLesson === lesson.id;
