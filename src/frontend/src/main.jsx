@@ -1,8 +1,12 @@
 import React, { createContext, useContext, useEffect } from "react";
 import ReactDOM from "react-dom/client";
+import { I18nextProvider } from "react-i18next";
 
 import App from "./App";
 import "./index.css";
+
+// Import and initialize i18n configuration before React renders
+import i18n from "./i18n/config";
 
 const GoogleAuthContext = createContext(null);
 
@@ -37,8 +41,10 @@ export function GoogleOAuthProvider({ clientId, children }) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <App />
-    </GoogleOAuthProvider>
+    <I18nextProvider i18n={i18n}>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <App />
+      </GoogleOAuthProvider>
+    </I18nextProvider>
   </React.StrictMode>,
 );

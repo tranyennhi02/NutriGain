@@ -1,0 +1,363 @@
+{
+  "errors": {
+    "auth": {
+      "invalid_credentials": "Email hoặc mật khẩu không đúng",
+      "token_expired": "Phiên đăng nhập đã hết hạn",
+      "token_invalid": "Token không hợp lệ",
+      "unauthorized": "Bạn cần đăng nhập để thực hiện thao tác này",
+      "insufficient_permissions": "Bạn không có quyền truy cập tài nguyên này",
+      "email_not_verified": "Email chưa được xác thực. Vui lòng kiểm tra hộp thư của bạn",
+      "account_locked": "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên",
+      "email_already_exists": "Email này đã được sử dụng",
+      "weak_password": "Mật khẩu quá yếu. Vui lòng sử dụng mật khẩu mạnh hơn",
+      "password_mismatch": "Mật khẩu xác nhận không khớp",
+      "invalid_reset_token": "Mã đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+      "verification_code_invalid": "Mã xác thực không đúng",
+      "verification_code_expired": "Mã xác thực đã hết hạn",
+      "too_many_attempts": "Quá nhiều lần thử. Vui lòng thử lại sau"
+    },
+    "validation": {
+      "required_field": "Trường {field} là bắt buộc",
+      "invalid_email": "Email không hợp lệ",
+      "invalid_phone": "Số điện thoại không hợp lệ",
+      "invalid_format": "Định dạng không hợp lệ cho trường {field}",
+      "min_length": "{field} phải có ít nhất {min} ký tự",
+      "max_length": "{field} không được vượt quá {max} ký tự",
+      "min_value": "{field} phải lớn hơn hoặc bằng {min}",
+      "max_value": "{field} phải nhỏ hơn hoặc bằng {max}",
+      "invalid_range": "{field} phải nằm trong khoảng từ {min} đến {max}",
+      "invalid_date": "Ngày không hợp lệ",
+      "future_date_not_allowed": "Ngày không được là ngày trong tương lai",
+      "past_date_not_allowed": "Ngày không được là ngày trong quá khứ"
+    },
+    "user": {
+      "not_found": "Không tìm thấy người dùng",
+      "profile_incomplete": "Hồ sơ chưa đầy đủ. Vui lòng cập nhật thông tin cá nhân",
+      "update_failed": "Cập nhật thông tin người dùng thất bại",
+      "invalid_status": "Trạng thái không hợp lệ",
+      "invalid_role": "Vai trò không hợp lệ"
+    },
+    "weight": {
+      "invalid_range": "Cân nặng phải nằm trong khoảng từ {min}kg đến {max}kg",
+      "excessive_change": "Cân nặng thay đổi quá nhiều ({change}kg). Mức thay đổi tối đa cho phép là {max}kg trong 1 lần cập nhật. Vui lòng kiểm tra lại số liệu",
+      "rapid_gain": "Tốc độ tăng cân quá nhanh ({change}kg trong {days} ngày = {rate}kg/ngày). Tốc độ tối đa là {max_rate}kg/ngày. Vui lòng kiểm tra lại số liệu",
+      "log_not_found": "Không tìm thấy bản ghi cân nặng",
+      "duplicate_date": "Đã có bản ghi cân nặng cho ngày này",
+      "delete_failed": "Xóa bản ghi cân nặng thất bại"
+    },
+    "height": {
+      "invalid_range": "Chiều cao phải nằm trong khoảng từ {min}cm đến {max}cm"
+    },
+    "food": {
+      "not_found": "Không tìm thấy món ăn",
+      "update_failed": "Cập nhật món ăn thất bại",
+      "delete_failed": "Xóa món ăn thất bại",
+      "image_approved_cannot_refetch": "Hình ảnh đã được phê duyệt không thể tự động lấy lại",
+      "name_required_for_refetch": "Tên món ăn là bắt buộc để lấy lại hình ảnh",
+      "cannot_build_search_query": "Không thể tạo truy vấn tìm kiếm cho món ăn này",
+      "pexels_api_not_configured": "PEXELS_API_KEY chưa được cấu hình",
+      "no_image_found": "Không tìm thấy hình ảnh"
+    },
+    "meal_plan": {
+      "not_found": "Không tìm thấy thực đơn",
+      "generation_failed": "Tạo thực đơn thất bại",
+      "insufficient_data": "Không đủ dữ liệu để tạo thực đơn. Vui lòng cập nhật hồ sơ của bạn",
+      "no_suitable_foods": "Không tìm thấy món ăn phù hợp với yêu cầu của bạn",
+      "internal_error": "Lỗi hệ thống khi tạo thực đơn. Vui lòng thử lại sau",
+      "calculation_error": "Lỗi hệ thống khi tạo thực đơn (internal recommender error). Vui lòng thử lại sau"
+    },
+    "recommendation": {
+      "not_found": "Không tìm thấy lịch sử đề xuất",
+      "missing_profile_fields": "Thiếu thông tin hồ sơ cần thiết để tạo đề xuất",
+      "failed": "Tạo đề xuất thất bại"
+    },
+    "feedback": {
+      "not_found": "Không tìm thấy phản hồi",
+      "update_failed": "Cập nhật phản hồi thất bại",
+      "invalid_type": "Loại phản hồi không hợp lệ"
+    },
+    "error_log": {
+      "not_found": "Không tìm thấy nhật ký lỗi"
+    },
+    "language": {
+      "unsupported_code": "Mã ngôn ngữ không được hỗ trợ",
+      "supported_languages": "Các ngôn ngữ được hỗ trợ: {languages}",
+      "update_failed": "Cập nhật ngôn ngữ thất bại"
+    },
+    "system": {
+      "internal_error": "Lỗi hệ thống. Vui lòng thử lại sau",
+      "database_error": "Lỗi cơ sở dữ liệu. Vui lòng thử lại sau",
+      "network_error": "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối của bạn",
+      "service_unavailable": "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau"
+    }
+  },
+  "api": {
+    "success": {
+      "profile_updated": "Cập nhật hồ sơ thành công",
+      "language_changed": "Đã thay đổi ngôn ngữ sang {language}",
+      "weight_logged": "Ghi nhận cân nặng thành công",
+      "weight_updated": "Cập nhật cân nặng thành công",
+      "weight_deleted": "Xóa bản ghi cân nặng thành công",
+      "user_created": "Tạo người dùng thành công",
+      "user_updated": "Cập nhật người dùng thành công",
+      "user_deleted": "Xóa người dùng thành công",
+      "food_created": "Tạo món ăn thành công",
+      "food_updated": "Cập nhật món ăn thành công",
+      "food_deleted": "Xóa món ăn thành công",
+      "food_excluded": "Loại trừ món ăn khỏi đề xuất thành công",
+      "food_included": "Thêm món ăn vào đề xuất thành công",
+      "image_refetched": "Lấy lại hình ảnh thành công",
+      "meal_plan_generated": "Tạo thực đơn thành công",
+      "meal_plan_updated": "Cập nhật thực đơn thành công",
+      "meal_plan_deleted": "Xóa thực đơn thành công",
+      "feedback_submitted": "Gửi phản hồi thành công",
+      "feedback_updated": "Cập nhật phản hồi thành công",
+      "error_log_resolved": "Đã đánh dấu lỗi là đã giải quyết",
+      "password_reset_sent": "Email đặt lại mật khẩu đã được gửi",
+      "password_changed": "Đổi mật khẩu thành công",
+      "email_verified": "Xác thực email thành công",
+      "verification_code_sent": "Mã xác thực đã được gửi",
+      "login_successful": "Đăng nhập thành công",
+      "logout_successful": "Đăng xuất thành công",
+      "registration_successful": "Đăng ký thành công"
+    },
+    "info": {
+      "welcome": "Chào mừng đến với NutriGain",
+      "loading": "Đang tải...",
+      "processing": "Đang xử lý...",
+      "saving": "Đang lưu...",
+      "generating": "Đang tạo thực đơn...",
+      "calculating": "Đang tính toán...",
+      "no_data": "Không có dữ liệu",
+      "no_results": "Không tìm thấy kết quả",
+      "empty_list": "Danh sách trống"
+    }
+  },
+  "enums": {
+    "meal_type": {
+      "breakfast": "Bữa sáng",
+      "lunch": "Bữa trưa",
+      "dinner": "Bữa tối",
+      "snack": "Bữa phụ"
+    },
+    "meal_role": {
+      "main": "Món chính",
+      "side": "Món phụ",
+      "protein": "Protein",
+      "carbs": "Tinh bột",
+      "vegetable": "Rau",
+      "fruit": "Trái cây",
+      "beverage": "Đồ uống",
+      "dessert": "Tráng miệng"
+    },
+    "balance_status": {
+      "balanced": "Cân bằng",
+      "high_protein": "Protein cao",
+      "high_carbs": "Carbs cao",
+      "high_fat": "Chất béo cao",
+      "low_protein": "Protein thấp",
+      "low_carbs": "Carbs thấp",
+      "low_fat": "Chất béo thấp"
+    },
+    "activity_level": {
+      "sedentary": "Ít vận động",
+      "light": "Vận động nhẹ",
+      "moderate": "Vận động vừa phải",
+      "active": "Vận động nhiều",
+      "very_active": "Vận động rất nhiều"
+    },
+    "sex": {
+      "male": "Nam",
+      "female": "Nữ",
+      "other": "Khác"
+    },
+    "gender": {
+      "male": "Nam",
+      "female": "Nữ",
+      "other": "Khác"
+    },
+    "diet_type": {
+      "normal": "Bình thường",
+      "vegetarian": "Ăn chay",
+      "vegan": "Thuần chay",
+      "pescatarian": "Ăn hải sản",
+      "keto": "Keto",
+      "paleo": "Paleo"
+    },
+    "budget_level": {
+      "low": "Tiết kiệm",
+      "medium": "Trung bình",
+      "high": "Cao"
+    },
+    "budget_tier": {
+      "budget": "Tiết kiệm",
+      "standard": "Tiêu chuẩn",
+      "premium": "Cao cấp"
+    },
+    "weight_gain_speed": {
+      "slow": "Chậm",
+      "moderate": "Vừa phải",
+      "fast": "Nhanh"
+    },
+    "user_role": {
+      "USER": "Người dùng",
+      "ADMIN": "Quản trị viên",
+      "SUPER_ADMIN": "Quản trị viên cấp cao"
+    },
+    "user_status": {
+      "ACTIVE": "Hoạt động",
+      "LOCKED": "Bị khóa",
+      "PENDING": "Chờ xác thực"
+    },
+    "meal_plan_status": {
+      "draft": "Nháp",
+      "active": "Đang hoạt động",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "food_log_status": {
+      "eaten": "Đã ăn",
+      "skipped": "Bỏ qua",
+      "planned": "Đã lên kế hoạch"
+    },
+    "feedback_type": {
+      "wrong_image": "Hình ảnh sai",
+      "abnormal_macro": "Dinh dưỡng bất thường",
+      "not_working": "Không hoạt động",
+      "ui_glitch": "Lỗi giao diện",
+      "other": "Khác"
+    },
+    "feedback_status": {
+      "pending": "Chờ xử lý",
+      "in_review": "Đang xem xét",
+      "resolved": "Đã giải quyết",
+      "dismissed": "Đã bỏ qua"
+    },
+    "error_log_status": {
+      "OPEN": "Mở",
+      "RESOLVED": "Đã giải quyết",
+      "INVESTIGATING": "Đang điều tra"
+    },
+    "auth_provider": {
+      "email": "Email",
+      "google": "Google",
+      "facebook": "Facebook"
+    },
+    "target_duration_unit": {
+      "days": "ngày",
+      "weeks": "tuần",
+      "months": "tháng"
+    },
+    "reminder_status": {
+      "sent": "Đã gửi",
+      "failed": "Thất bại",
+      "pending": "Chờ gửi"
+    },
+    "challenge_status": {
+      "not_started": "Chưa bắt đầu",
+      "in_progress": "Đang tiến hành",
+      "completed": "Đã hoàn thành",
+      "failed": "Thất bại"
+    }
+  },
+  "fields": {
+    "user": {
+      "email": "Email",
+      "password": "Mật khẩu",
+      "full_name": "Họ và tên",
+      "role": "Vai trò",
+      "status": "Trạng thái",
+      "preferred_language": "Ngôn ngữ ưa thích",
+      "created_at": "Ngày tạo",
+      "updated_at": "Ngày cập nhật"
+    },
+    "profile": {
+      "weight_kg": "Cân nặng (kg)",
+      "initial_weight_kg": "Cân nặng ban đầu (kg)",
+      "height_cm": "Chiều cao (cm)",
+      "age": "Tuổi",
+      "sex": "Giới tính",
+      "activity_level": "Mức độ hoạt động",
+      "surplus_kcal": "Calo thừa (kcal)",
+      "target_weight_kg": "Cân nặng mục tiêu (kg)",
+      "target_duration": "Thời gian mục tiêu",
+      "weight_gain_speed": "Tốc độ tăng cân",
+      "diet_type": "Chế độ ăn",
+      "budget_level": "Mức ngân sách",
+      "items_per_meal": "Số món ăn mỗi bữa",
+      "breakfast_time": "Giờ ăn sáng",
+      "lunch_time": "Giờ ăn trưa",
+      "dinner_time": "Giờ ăn tối",
+      "meal_reminder_enabled": "Bật nhắc nhở bữa ăn",
+      "phone_number": "Số điện thoại",
+      "reminder_email": "Email nhắc nhở"
+    },
+    "food": {
+      "food_id": "Mã món ăn",
+      "name": "Tên món ăn",
+      "name_vi": "Tên tiếng Việt",
+      "name_en": "Tên tiếng Anh",
+      "calories": "Calo",
+      "protein": "Protein",
+      "fat": "Chất béo",
+      "carbs": "Carbohydrate",
+      "category": "Danh mục",
+      "type": "Loại",
+      "meal_role": "Vai trò trong bữa ăn",
+      "serving_display": "Khẩu phần",
+      "image_url": "URL hình ảnh"
+    },
+    "meal_plan": {
+      "plan_date": "Ngày thực đơn",
+      "target_kcal": "Calo mục tiêu",
+      "target_protein": "Protein mục tiêu",
+      "target_fat": "Chất béo mục tiêu",
+      "target_carbs": "Carbs mục tiêu",
+      "total_kcal": "Tổng calo",
+      "total_protein": "Tổng protein",
+      "total_fat": "Tổng chất béo",
+      "total_carbs": "Tổng carbs",
+      "status": "Trạng thái",
+      "note": "Ghi chú"
+    },
+    "weight_log": {
+      "weight_kg": "Cân nặng (kg)",
+      "log_date": "Ngày ghi nhận",
+      "note": "Ghi chú",
+      "source": "Nguồn"
+    },
+    "feedback": {
+      "type": "Loại",
+      "item": "Mục",
+      "description": "Mô tả",
+      "status": "Trạng thái",
+      "admin_note": "Ghi chú của quản trị viên"
+    }
+  },
+  "units": {
+    "kg": "kg",
+    "cm": "cm",
+    "kcal": "kcal",
+    "g": "g",
+    "mg": "mg",
+    "ml": "ml",
+    "serving": "khẩu phần",
+    "bowl": "chén",
+    "cup": "cốc",
+    "piece": "miếng",
+    "slice": "lát",
+    "tbsp": "muỗng canh",
+    "tsp": "muỗng cà phê"
+  },
+  "time": {
+    "days_ago": "{count} ngày trước",
+    "weeks_ago": "{count} tuần trước",
+    "months_ago": "{count} tháng trước",
+    "hours_ago": "{count} giờ trước",
+    "minutes_ago": "{count} phút trước",
+    "just_now": "Vừa xong",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "tomorrow": "Ngày mai"
+  }
+}

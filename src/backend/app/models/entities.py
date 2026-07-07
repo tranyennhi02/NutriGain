@@ -21,6 +21,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(30), default="USER", nullable=False)
     status: Mapped[str] = mapped_column(String(30), default="ACTIVE", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    preferred_language: Mapped[str | None] = mapped_column(String(10), nullable=True, default=None, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -209,6 +210,7 @@ class Food(Base):
     fat: Mapped[float | None] = mapped_column(Float, nullable=True)
     carbs: Mapped[float | None] = mapped_column(Float, nullable=True)
     name_vi: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -500,3 +502,88 @@ class UserFeedback(Base):
 
     user: Mapped[User] = relationship(back_populates="feedbacks", foreign_keys=[user_id])
     resolver: Mapped[User | None] = relationship(foreign_keys=[resolved_by])
+
+
+class LessonProgress(Base):
+    """User's progress on individual lessons"""
+    __tablename__ = "lesson_progress"
+    __table_args__ = (UniqueConstraint("user_id", "lesson_id", name="uq_user_lesson_progress"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    lesson_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    
+    # Progress tracking
+    status: Mapped[str] = mapped_column(String(30), default="not_started", nullable=False)  # not_started, in_progress, completed
+    scroll_progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # 0-100%
+    time_spent_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Quiz results
+    quiz_unlocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    quiz_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    quiz_best_score: Mapped[float | None] = mapped_column(Float, nullable=True)  # 0-100%
+    quiz_passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    quiz_locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
+    # XP and completion
+    xp_earned: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
+    # Timestamps
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_accessed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user: Mapped[User] = relationship()
+    quiz_answers: Mapped[list["QuizAnswer"]] = relationship(back_populates="lesson_progress", cascade="all, delete-orphan")
+
+
+class QuizAnswer(Base):
+    """Individual quiz question answers"""
+    __tablename__ = "quiz_answers"
+    __table_args__ = (UniqueConstraint("lesson_progress_id", "question_id", "attempt_number", name="uq_quiz_answer_attempt"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    lesson_progress_id: Mapped[int] = mapped_column(ForeignKey("lesson_progress.id"), nullable=False, index=True)
+    question_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    
+    selected_answer_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    time_spent_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    
+    answered_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    lesson_progress: Mapped[LessonProgress] = relationship(back_populates="quiz_answers")
+
+
+class UserLearningStats(Base):
+    """Aggregate learning statistics per user"""
+    __tablename__ = "user_learning_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    
+    # Overall stats
+    total_xp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_lessons_in_progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_time_spent_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Streak tracking
+    current_streak_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    longest_streak_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    
+    # Quiz performance
+    total_quiz_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_quiz_passed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    average_quiz_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user: Mapped[User] = relationship()=[resolved_by])

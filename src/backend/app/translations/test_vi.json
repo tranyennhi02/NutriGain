@@ -1,0 +1,9 @@
+{
+  "test": {
+    "simple": "Xin chào",
+    "nested": {
+      "deep": "Tin nhắn lồng nhau"
+    },
+    "with_params": "Xin chào, {name}! Bạn có {count} tin nhắn mới."
+  }
+}

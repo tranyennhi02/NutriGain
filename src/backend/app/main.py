@@ -93,6 +93,7 @@ except Exception as e:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.middleware import ContentLanguageMiddleware
 from app.api.routes import router
 from app.core.config import settings
 from app.core.database import Base, engine, wait_for_database
@@ -110,6 +111,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add Content-Language header to all API responses
+app.add_middleware(ContentLanguageMiddleware)
 
 
 def run_db_repairs() -> None:

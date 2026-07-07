@@ -840,3 +840,67 @@ class FeedbackListResponse(BaseModel):
     items: list[FeedbackResponse]
     total: int
     pending_count: int = 0
+
+
+class LanguageUpdateSchema(BaseModel):
+    language: str = Field(..., pattern="^(vi|en)$")
+    
+    @field_validator('language')
+    @classmethod
+    def validate_supported_language(cls, v: str) -> str:
+        if v not in ['vi', 'en']:
+            raise ValueError('Unsupported language code')
+        return v
+
+
+class LanguageUpdateResponse(BaseModel):
+    success: bool
+    message: str
+    language: str
+
+
+# Learning System Schemas
+class ScrollProgressInput(BaseModel):
+    scroll_progress: float = Field(..., ge=0, le=100)
+    time_spent: int = Field(default=0, ge=0)
+
+
+class QuizAnswerInput(BaseModel):
+    question_id: str
+    selected_answer: int
+    is_correct: bool
+    time_spent: int = Field(default=0, ge=0)
+
+
+class QuizSubmitInput(BaseModel):
+    answers: list[QuizAnswerInput]
+    xp_reward: int = Field(..., ge=0)
+
+
+class LessonProgressResponse(BaseModel):
+    lesson_id: str
+    status: str
+    scroll_progress: float
+    time_spent_seconds: int
+    quiz_unlocked: bool
+    quiz_attempts: int
+    quiz_best_score: float | None
+    quiz_passed: bool
+    quiz_locked_until: datetime | None
+    xp_earned: int
+    completed_at: datetime | None
+    started_at: datetime | None
+    last_accessed_at: datetime
+
+
+class LearningStatsResponse(BaseModel):
+    total_xp: int
+    total_lessons_completed: int
+    total_lessons_in_progress: int
+    total_time_spent_seconds: int
+    current_streak_days: int
+    longest_streak_days: int
+    last_activity_date: date | None
+    total_quiz_attempts: int
+    total_quiz_passed: int
+    average_quiz_score: float | None

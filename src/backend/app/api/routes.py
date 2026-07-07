@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from urllib.parse import urlencode
 
-from app.api.dependencies import get_current_user, get_optional_current_user, require_admin
+from app.api.dependencies import get_current_user, get_optional_current_user, require_admin, get_user_language
 from app.api.v1.routes.ai_chat import router as ai_chat_router
 from app.core.database import get_db
 from app.core.config import settings
@@ -26,6 +26,7 @@ from app.services.weight_log_service import WeightLogService
 from app.services.gamification_service import GamificationService
 from app.services.meal_reminder_service import send_test_meal_reminder_email, send_test_meal_reminder_sms
 from app.services.sms_service import is_twilio_configured
+from app.services.translation_service import get_translation_service
 from app.views.schemas import (
     AccountStatusUpdate,
     AdminCategorySummaryResponse,
@@ -54,6 +55,8 @@ from app.views.schemas import (
     FoodUpdate,
     FoodView,
     ForgotPasswordInput,
+    LanguageUpdateSchema,
+    LanguageUpdateResponse,
     MealPlanItemCheckInInput,
     MealPlanRegenerateInput,
     MealPlanRestoreInput,
@@ -452,6 +455,95 @@ def update_profile(
     current_user: User = Depends(get_current_user),
 ) -> UserProfileView:
     return user_service.update_profile(db, current_user, payload)
+
+
+@router.patch("/users/me/language", response_model=LanguageUpdateResponse, tags=["users"])
+def update_user_language(
+    payload: LanguageUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    language: str = Depends(get_user_language),
+) -> LanguageUpdateResponse:
+    """
+    Update user's preferred language.
+    
+    Request Body:
+        {
+          "language": "en"
+        }
+    
+    Response:
+        {
+          "success": true,
+          "message": "Language updated successfully",
+          "language": "en"
+        }
+    
+    Errors:
+        400: Unsupported language code
+        401: Unauthorized
+    """
+    # Validate that language code is supported
+    supported_languages = ["vi", "en"]
+    if payload.language not in supported_languages:
+        translation_service = get_translation_service()
+        error_message = translation_service.get_translation(
+            "errors.language.unsupported_code",
+            language
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=error_message
+        )
+    
+    # Update user's preferred_language in database
+    try:
+        current_user.preferred_language = payload.language
+        db.commit()
+        db.refresh(current_user)
+        
+        # Get translated success message
+        translation_service = get_translation_service()
+        
+        # Get language name for the message
+        language_names = {"vi": "Tiếng Việt", "en": "English"}
+        language_name = language_names.get(payload.language, payload.language)
+        
+        success_message = translation_service.get_translation(
+            "api.success.language_changed",
+            payload.language,  # This is the language parameter (2nd positional arg)
+            language=language_name  # This is a keyword arg for interpolation
+        )
+        
+        logger.info(
+            "[UPDATE USER LANGUAGE] user_id=%s, new_language=%s",
+            current_user.id,
+            payload.language
+        )
+        
+        return LanguageUpdateResponse(
+            success=True,
+            message=success_message,
+            language=payload.language
+        )
+    except Exception as exc:
+        db.rollback()
+        logger.error(
+            "[UPDATE USER LANGUAGE ERROR] user_id=%s, error=%s",
+            current_user.id,
+            exc
+        )
+        
+        translation_service = get_translation_service()
+        error_message = translation_service.get_translation(
+            "errors.language.update_failed",
+            language
+        )
+        
+        raise HTTPException(
+            status_code=500,
+            detail=error_message
+        )
 
 
 @router.post("/meal-reminders/test-email", response_model=MealReminderTestEmailResponse, tags=["meal-reminders"])

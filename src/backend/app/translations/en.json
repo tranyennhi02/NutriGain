@@ -1,0 +1,363 @@
+{
+  "errors": {
+    "auth": {
+      "invalid_credentials": "Email or password is incorrect",
+      "token_expired": "Session has expired",
+      "token_invalid": "Invalid token",
+      "unauthorized": "You need to login to perform this action",
+      "insufficient_permissions": "You do not have permission to access this resource",
+      "email_not_verified": "Email has not been verified. Please check your inbox",
+      "account_locked": "Account has been locked. Please contact administrator",
+      "email_already_exists": "This email is already in use",
+      "weak_password": "Password is too weak. Please use a stronger password",
+      "password_mismatch": "Password confirmation does not match",
+      "invalid_reset_token": "Password reset token is invalid or has expired",
+      "verification_code_invalid": "Verification code is incorrect",
+      "verification_code_expired": "Verification code has expired",
+      "too_many_attempts": "Too many attempts. Please try again later"
+    },
+    "validation": {
+      "required_field": "The {field} field is required",
+      "invalid_email": "Invalid email address",
+      "invalid_phone": "Invalid phone number",
+      "invalid_format": "Invalid format for {field}",
+      "min_length": "{field} must be at least {min} characters",
+      "max_length": "{field} must not exceed {max} characters",
+      "min_value": "{field} must be greater than or equal to {min}",
+      "max_value": "{field} must be less than or equal to {max}",
+      "invalid_range": "{field} must be between {min} and {max}",
+      "invalid_date": "Invalid date",
+      "future_date_not_allowed": "Date cannot be in the future",
+      "past_date_not_allowed": "Date cannot be in the past"
+    },
+    "user": {
+      "not_found": "User not found",
+      "profile_incomplete": "Profile is incomplete. Please update your personal information",
+      "update_failed": "Failed to update user information",
+      "invalid_status": "Invalid status",
+      "invalid_role": "Invalid role"
+    },
+    "weight": {
+      "invalid_range": "Weight must be between {min}kg and {max}kg",
+      "excessive_change": "Weight change is too large ({change}kg). Maximum allowed change is {max}kg per update. Please verify the data",
+      "rapid_gain": "Weight gain rate is too fast ({change}kg in {days} days = {rate}kg/day). Maximum rate is {max_rate}kg/day. Please verify the data",
+      "log_not_found": "Weight log entry not found",
+      "duplicate_date": "A weight log entry already exists for this date",
+      "delete_failed": "Failed to delete weight log entry"
+    },
+    "height": {
+      "invalid_range": "Height must be between {min}cm and {max}cm"
+    },
+    "food": {
+      "not_found": "Food item not found",
+      "update_failed": "Failed to update food item",
+      "delete_failed": "Failed to delete food item",
+      "image_approved_cannot_refetch": "Approved images cannot be automatically refetched",
+      "name_required_for_refetch": "Food name is required to refetch image",
+      "cannot_build_search_query": "Cannot build search query for this food item",
+      "pexels_api_not_configured": "PEXELS_API_KEY is not configured",
+      "no_image_found": "No image found"
+    },
+    "meal_plan": {
+      "not_found": "Meal plan not found",
+      "generation_failed": "Failed to generate meal plan",
+      "insufficient_data": "Insufficient data to generate meal plan. Please update your profile",
+      "no_suitable_foods": "No suitable foods found for your requirements",
+      "internal_error": "System error while generating meal plan. Please try again later",
+      "calculation_error": "System error while generating meal plan (internal recommender error). Please try again later"
+    },
+    "recommendation": {
+      "not_found": "Recommendation history not found",
+      "missing_profile_fields": "Missing required profile information to generate recommendation",
+      "failed": "Failed to generate recommendation"
+    },
+    "feedback": {
+      "not_found": "Feedback not found",
+      "update_failed": "Failed to update feedback",
+      "invalid_type": "Invalid feedback type"
+    },
+    "error_log": {
+      "not_found": "Error log not found"
+    },
+    "language": {
+      "unsupported_code": "Unsupported language code",
+      "supported_languages": "Supported languages: {languages}",
+      "update_failed": "Failed to update language"
+    },
+    "system": {
+      "internal_error": "System error. Please try again later",
+      "database_error": "Database error. Please try again later",
+      "network_error": "Network connection error. Please check your connection",
+      "service_unavailable": "Service temporarily unavailable. Please try again later"
+    }
+  },
+  "api": {
+    "success": {
+      "profile_updated": "Profile updated successfully",
+      "language_changed": "Language changed to {language}",
+      "weight_logged": "Weight logged successfully",
+      "weight_updated": "Weight updated successfully",
+      "weight_deleted": "Weight log entry deleted successfully",
+      "user_created": "User created successfully",
+      "user_updated": "User updated successfully",
+      "user_deleted": "User deleted successfully",
+      "food_created": "Food item created successfully",
+      "food_updated": "Food item updated successfully",
+      "food_deleted": "Food item deleted successfully",
+      "food_excluded": "Food item excluded from recommendations successfully",
+      "food_included": "Food item included in recommendations successfully",
+      "image_refetched": "Image refetched successfully",
+      "meal_plan_generated": "Meal plan generated successfully",
+      "meal_plan_updated": "Meal plan updated successfully",
+      "meal_plan_deleted": "Meal plan deleted successfully",
+      "feedback_submitted": "Feedback submitted successfully",
+      "feedback_updated": "Feedback updated successfully",
+      "error_log_resolved": "Error marked as resolved",
+      "password_reset_sent": "Password reset email has been sent",
+      "password_changed": "Password changed successfully",
+      "email_verified": "Email verified successfully",
+      "verification_code_sent": "Verification code has been sent",
+      "login_successful": "Login successful",
+      "logout_successful": "Logout successful",
+      "registration_successful": "Registration successful"
+    },
+    "info": {
+      "welcome": "Welcome to NutriGain",
+      "loading": "Loading...",
+      "processing": "Processing...",
+      "saving": "Saving...",
+      "generating": "Generating meal plan...",
+      "calculating": "Calculating...",
+      "no_data": "No data available",
+      "no_results": "No results found",
+      "empty_list": "Empty list"
+    }
+  },
+  "enums": {
+    "meal_type": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "snack": "Snack"
+    },
+    "meal_role": {
+      "main": "Main dish",
+      "side": "Side dish",
+      "protein": "Protein",
+      "carbs": "Carbohydrates",
+      "vegetable": "Vegetable",
+      "fruit": "Fruit",
+      "beverage": "Beverage",
+      "dessert": "Dessert"
+    },
+    "balance_status": {
+      "balanced": "Balanced",
+      "high_protein": "High protein",
+      "high_carbs": "High carbs",
+      "high_fat": "High fat",
+      "low_protein": "Low protein",
+      "low_carbs": "Low carbs",
+      "low_fat": "Low fat"
+    },
+    "activity_level": {
+      "sedentary": "Sedentary",
+      "light": "Light activity",
+      "moderate": "Moderate activity",
+      "active": "Active",
+      "very_active": "Very active"
+    },
+    "sex": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "diet_type": {
+      "normal": "Normal",
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "pescatarian": "Pescatarian",
+      "keto": "Keto",
+      "paleo": "Paleo"
+    },
+    "budget_level": {
+      "low": "Budget-friendly",
+      "medium": "Medium",
+      "high": "Premium"
+    },
+    "budget_tier": {
+      "budget": "Budget",
+      "standard": "Standard",
+      "premium": "Premium"
+    },
+    "weight_gain_speed": {
+      "slow": "Slow",
+      "moderate": "Moderate",
+      "fast": "Fast"
+    },
+    "user_role": {
+      "USER": "User",
+      "ADMIN": "Administrator",
+      "SUPER_ADMIN": "Super Administrator"
+    },
+    "user_status": {
+      "ACTIVE": "Active",
+      "LOCKED": "Locked",
+      "PENDING": "Pending verification"
+    },
+    "meal_plan_status": {
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "food_log_status": {
+      "eaten": "Eaten",
+      "skipped": "Skipped",
+      "planned": "Planned"
+    },
+    "feedback_type": {
+      "wrong_image": "Wrong image",
+      "abnormal_macro": "Abnormal nutrition",
+      "not_working": "Not working",
+      "ui_glitch": "UI glitch",
+      "other": "Other"
+    },
+    "feedback_status": {
+      "pending": "Pending",
+      "in_review": "In review",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed"
+    },
+    "error_log_status": {
+      "OPEN": "Open",
+      "RESOLVED": "Resolved",
+      "INVESTIGATING": "Investigating"
+    },
+    "auth_provider": {
+      "email": "Email",
+      "google": "Google",
+      "facebook": "Facebook"
+    },
+    "target_duration_unit": {
+      "days": "days",
+      "weeks": "weeks",
+      "months": "months"
+    },
+    "reminder_status": {
+      "sent": "Sent",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "challenge_status": {
+      "not_started": "Not started",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
+  },
+  "fields": {
+    "user": {
+      "email": "Email",
+      "password": "Password",
+      "full_name": "Full name",
+      "role": "Role",
+      "status": "Status",
+      "preferred_language": "Preferred language",
+      "created_at": "Created at",
+      "updated_at": "Updated at"
+    },
+    "profile": {
+      "weight_kg": "Weight (kg)",
+      "initial_weight_kg": "Initial weight (kg)",
+      "height_cm": "Height (cm)",
+      "age": "Age",
+      "sex": "Sex",
+      "activity_level": "Activity level",
+      "surplus_kcal": "Calorie surplus (kcal)",
+      "target_weight_kg": "Target weight (kg)",
+      "target_duration": "Target duration",
+      "weight_gain_speed": "Weight gain speed",
+      "diet_type": "Diet type",
+      "budget_level": "Budget level",
+      "items_per_meal": "Items per meal",
+      "breakfast_time": "Breakfast time",
+      "lunch_time": "Lunch time",
+      "dinner_time": "Dinner time",
+      "meal_reminder_enabled": "Meal reminder enabled",
+      "phone_number": "Phone number",
+      "reminder_email": "Reminder email"
+    },
+    "food": {
+      "food_id": "Food ID",
+      "name": "Name",
+      "name_vi": "Vietnamese name",
+      "name_en": "English name",
+      "calories": "Calories",
+      "protein": "Protein",
+      "fat": "Fat",
+      "carbs": "Carbohydrates",
+      "category": "Category",
+      "type": "Type",
+      "meal_role": "Meal role",
+      "serving_display": "Serving size",
+      "image_url": "Image URL"
+    },
+    "meal_plan": {
+      "plan_date": "Plan date",
+      "target_kcal": "Target calories",
+      "target_protein": "Target protein",
+      "target_fat": "Target fat",
+      "target_carbs": "Target carbs",
+      "total_kcal": "Total calories",
+      "total_protein": "Total protein",
+      "total_fat": "Total fat",
+      "total_carbs": "Total carbs",
+      "status": "Status",
+      "note": "Note"
+    },
+    "weight_log": {
+      "weight_kg": "Weight (kg)",
+      "log_date": "Log date",
+      "note": "Note",
+      "source": "Source"
+    },
+    "feedback": {
+      "type": "Type",
+      "item": "Item",
+      "description": "Description",
+      "status": "Status",
+      "admin_note": "Admin note"
+    }
+  },
+  "units": {
+    "kg": "kg",
+    "cm": "cm",
+    "kcal": "kcal",
+    "g": "g",
+    "mg": "mg",
+    "ml": "ml",
+    "serving": "serving",
+    "bowl": "bowl",
+    "cup": "cup",
+    "piece": "piece",
+    "slice": "slice",
+    "tbsp": "tablespoon",
+    "tsp": "teaspoon"
+  },
+  "time": {
+    "days_ago": "{count} days ago",
+    "weeks_ago": "{count} weeks ago",
+    "months_ago": "{count} months ago",
+    "hours_ago": "{count} hours ago",
+    "minutes_ago": "{count} minutes ago",
+    "just_now": "Just now",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow"
+  }
+}

@@ -11,11 +11,70 @@ def _table_columns(engine: Engine, table_name: str) -> set[str]:
     return {column["name"] for column in inspector.get_columns(table_name)}
 
 
+def _index_exists(engine: Engine, table_name: str, index_name: str) -> bool:
+    """Check if an index exists on a table."""
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return False
+    indexes = inspector.get_indexes(table_name)
+    return any(idx["name"] == index_name for idx in indexes)
+
+
 def _add_column_if_missing(engine: Engine, table_name: str, column_name: str, ddl: str) -> None:
     if column_name in _table_columns(engine, table_name):
         return
     with engine.begin() as connection:
         connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {ddl}"))
+
+
+def _add_index_if_missing(engine: Engine, table_name: str, index_name: str, column_name: str) -> None:
+    """Add an index if it doesn't already exist."""
+    if _index_exists(engine, table_name, index_name):
+        return
+    with engine.begin() as connection:
+        connection.execute(text(f"CREATE INDEX {index_name} ON {table_name}({column_name})"))
+
+
+def _drop_column_if_exists(engine: Engine, table_name: str, column_name: str) -> None:
+    """Drop a column if it exists."""
+    if column_name not in _table_columns(engine, table_name):
+        return
+    with engine.begin() as connection:
+        connection.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}"))
+
+
+def _drop_index_if_exists(engine: Engine, table_name: str, index_name: str) -> None:
+    """Drop an index if it exists."""
+    if not _index_exists(engine, table_name, index_name):
+        return
+    with engine.begin() as connection:
+        connection.execute(text(f"DROP INDEX {index_name} ON {table_name}"))
+
+
+def rollback_i18n_migration(engine: Engine) -> None:
+    """
+    Rollback the i18n migration by removing the added columns and indexes.
+    
+    This function can be used to revert the database schema changes made for
+    multilingual support if needed.
+    """
+    print("[ROLLBACK] Starting i18n migration rollback...")
+    
+    # Drop index on users.preferred_language
+    _drop_index_if_exists(engine, "users", "idx_users_preferred_language")
+    print("[ROLLBACK] Dropped index idx_users_preferred_language (if existed)")
+    
+    # Drop preferred_language column from users
+    _drop_column_if_exists(engine, "users", "preferred_language")
+    print("[ROLLBACK] Dropped column users.preferred_language (if existed)")
+    
+    # Drop name_en column from foods
+    _drop_column_if_exists(engine, "foods", "name_en")
+    print("[ROLLBACK] Dropped column foods.name_en (if existed)")
+    
+    print("[ROLLBACK] i18n migration rollback completed successfully")
+
+
 
 
 def ensure_database_schema(engine: Engine) -> None:
@@ -30,6 +89,12 @@ def ensure_database_schema(engine: Engine) -> None:
     _add_column_if_missing(engine, "users", "email_verified", "email_verified BOOLEAN NOT NULL DEFAULT 0")
     _add_column_if_missing(engine, "users", "role", "role VARCHAR(30) NOT NULL DEFAULT 'USER'")
     _add_column_if_missing(engine, "users", "status", "status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'")
+    
+    # i18n support: Add preferred_language column to users table
+    _add_column_if_missing(engine, "users", "preferred_language", "preferred_language VARCHAR(10) NULL")
+    # Create index on preferred_language for query performance
+    _add_index_if_missing(engine, "users", "idx_users_preferred_language", "preferred_language")
+    
     _add_column_if_missing(engine, "foods", "name", "name TEXT NULL")
     _add_column_if_missing(engine, "foods", "calories", "calories FLOAT NULL")
     _add_column_if_missing(engine, "foods", "protein", "protein FLOAT NULL")
@@ -73,6 +138,9 @@ def ensure_database_schema(engine: Engine) -> None:
     _add_column_if_missing(engine, "foods", "is_natural_food", "is_natural_food BOOLEAN NOT NULL DEFAULT 0")
     _add_column_if_missing(engine, "foods", "budget_tier", "budget_tier VARCHAR(20) NOT NULL DEFAULT 'standard'")
     _add_column_if_missing(engine, "foods", "natural_priority_score", "natural_priority_score FLOAT NOT NULL DEFAULT 0.5")
+    
+    # i18n support: Add English name column to foods table
+    _add_column_if_missing(engine, "foods", "name_en", "name_en TEXT NULL")
 
     _add_column_if_missing(engine, "recommendation_requests", "user_id", "user_id INTEGER NULL")
     _add_column_if_missing(engine, "recommendation_requests", "bmr", "bmr FLOAT NULL")
@@ -401,5 +469,79 @@ def ensure_database_schema(engine: Engine) -> None:
                     INDEX idx_user_feedback_user_id (user_id),
                     INDEX idx_user_feedback_created_at (created_at),
                     INDEX idx_user_feedback_status (status)
+                )
+            """))
+    
+    # Learning system tables
+    if "lesson_progress" not in inspector.get_table_names():
+        with engine.begin() as connection:
+            connection.execute(text("""
+                CREATE TABLE lesson_progress (
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    user_id INTEGER NOT NULL,
+                    lesson_id VARCHAR(100) NOT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT 'not_started',
+                    scroll_progress FLOAT NOT NULL DEFAULT 0.0,
+                    time_spent_seconds INTEGER NOT NULL DEFAULT 0,
+                    quiz_unlocked BOOLEAN NOT NULL DEFAULT 0,
+                    quiz_attempts INTEGER NOT NULL DEFAULT 0,
+                    quiz_best_score FLOAT NULL,
+                    quiz_passed BOOLEAN NOT NULL DEFAULT 0,
+                    quiz_locked_until DATETIME NULL,
+                    xp_earned INTEGER NOT NULL DEFAULT 0,
+                    completed_at DATETIME NULL,
+                    started_at DATETIME NULL,
+                    last_accessed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY uq_user_lesson_progress (user_id, lesson_id),
+                    INDEX idx_lesson_progress_user_id (user_id),
+                    INDEX idx_lesson_progress_lesson_id (lesson_id),
+                    INDEX idx_lesson_progress_status (status)
+                )
+            """))
+    
+    if "quiz_answers" not in inspector.get_table_names():
+        with engine.begin() as connection:
+            connection.execute(text("""
+                CREATE TABLE quiz_answers (
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    lesson_progress_id INTEGER NOT NULL,
+                    question_id VARCHAR(100) NOT NULL,
+                    attempt_number INTEGER NOT NULL DEFAULT 1,
+                    selected_answer_index INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    time_spent_seconds INTEGER NULL,
+                    answered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (lesson_progress_id) REFERENCES lesson_progress(id) ON DELETE CASCADE,
+                    UNIQUE KEY uq_quiz_answer_attempt (lesson_progress_id, question_id, attempt_number),
+                    INDEX idx_quiz_answers_lesson_progress_id (lesson_progress_id),
+                    INDEX idx_quiz_answers_question_id (question_id)
+                )
+            """))
+    
+    if "user_learning_stats" not in inspector.get_table_names():
+        with engine.begin() as connection:
+            connection.execute(text("""
+                CREATE TABLE user_learning_stats (
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    user_id INTEGER NOT NULL UNIQUE,
+                    total_xp INTEGER NOT NULL DEFAULT 0,
+                    total_lessons_completed INTEGER NOT NULL DEFAULT 0,
+                    total_lessons_in_progress INTEGER NOT NULL DEFAULT 0,
+                    total_time_spent_seconds INTEGER NOT NULL DEFAULT 0,
+                    current_streak_days INTEGER NOT NULL DEFAULT 0,
+                    longest_streak_days INTEGER NOT NULL DEFAULT 0,
+                    last_activity_date DATE NULL,
+                    total_quiz_attempts INTEGER NOT NULL DEFAULT 0,
+                    total_quiz_passed INTEGER NOT NULL DEFAULT 0,
+                    average_quiz_score FLOAT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_user_learning_stats_user_id (user_id),
+                    INDEX idx_user_learning_stats_total_xp (total_xp)
                 )
             """))
