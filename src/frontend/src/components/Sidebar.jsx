@@ -90,12 +90,7 @@ export default function Sidebar({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font900 text-brand-text-main">{userEmail || "user@nutrigain.vn"}</p>
-            <div className="mt-1 flex items-center gap-2 text-xs font800 text-brand-primary">
-              <span className="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_0_4px_rgba(16,185,129,0.14)]" />
-              {t('sidebar.liveTracking')}
-            </div>
           </div>
-
         </div>
         <button
           type="button"

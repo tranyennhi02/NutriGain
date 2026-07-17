@@ -685,14 +685,23 @@ export default function App() {
 
   if (appView === "onboarding") {
     return (
-      <OnboardingView
-        userEmail={userEmail}
-        user={authUser}
-        onComplete={handleOnboardingComplete}
-        initialData={profileFormState}
-        onLogout={handleLogout}
-        profileFormMode={profileFormMode}
-      />
+      <>
+        <OnboardingView
+          userEmail={userEmail}
+          user={authUser}
+          onComplete={handleOnboardingComplete}
+          initialData={profileFormState}
+          onLogout={handleLogout}
+          profileFormMode={profileFormMode}
+        />
+        
+        {showLogoutConfirm && (
+          <LogoutConfirmModal
+            onConfirm={confirmLogout}
+            onCancel={() => setShowLogoutConfirm(false)}
+          />
+        )}
+      </>
     );
   }
 

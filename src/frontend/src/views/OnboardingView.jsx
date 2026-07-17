@@ -416,7 +416,11 @@ function StepActivity({ data, update }) {
 
 // ─── StepGoal ────────────────────────────────────────────────────────────────
 function StepGoal({ data, update, errors, validation }) {
-  function handle(e){ update(e.target.name, e.target.value); }
+  function handle(e){ 
+    // Allow free input, validation will show warnings but not block
+    update(e.target.name, e.target.value);
+  }
+  
   const weightGoalValidation = validation || validateWeightGoalTimeline({
     currentWeightKg: data.weight || data.weight_kg,
     targetWeightKg: data.target_weight || data.target_weight_kg,
@@ -442,8 +446,41 @@ function StepGoal({ data, update, errors, validation }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <NumberField label="Cân nặng mục tiêu" name="target_weight" value={data.target_weight} onChange={handle} placeholder="65" unit="kg" error={errors.target_weight} />
-        <NumberField label="Bạn muốn đạt mục tiêu trong bao lâu?" name="target_duration_value" value={data.target_duration_value} onChange={handle} placeholder="12" unit={data.target_duration_unit === "weeks" ? "tuần" : "tháng"} error={errors.target_duration_value} />
+        <div>
+          <NumberField 
+            label="Cân nặng mục tiêu" 
+            name="target_weight" 
+            value={data.target_weight} 
+            onChange={handle} 
+            placeholder="65" 
+            unit="kg" 
+            error={errors.target_weight} 
+          />
+          {hasValidGoal && goalPreview.hasDuration && (
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              Tối đa: {formatKg((goalPreview.currentWeight || 0) + ((goalPreview.durationValue || 0) * (goalPreview.durationUnit === "weeks" ? 1/4 : 1) * SAFE_GAIN_MAX_KG_PER_MONTH))}kg 
+              (với {goalPreview.durationValue} {goalPreview.durationUnit === "weeks" ? "tuần" : "tháng"})
+            </p>
+          )}
+        </div>
+        <div>
+          <NumberField 
+            label="Bạn muốn đạt mục tiêu trong bao lâu?" 
+            name="target_duration_value" 
+            value={data.target_duration_value} 
+            onChange={handle} 
+            placeholder="12" 
+            unit={data.target_duration_unit === "weeks" ? "tuần" : "tháng"} 
+            error={errors.target_duration_value} 
+          />
+          {hasValidGoal && recommendedMinMonths && (
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              Tối thiểu: {data.target_duration_unit === "weeks" ? recommendedMinMonths * WEEKS_PER_MONTH : recommendedMinMonths} 
+              {data.target_duration_unit === "weeks" ? " tuần" : " tháng"} 
+              (để tăng {targetDiffLabel}kg an toàn)
+            </p>
+          )}
+        </div>
       </div>
       <div>
         <label className="mb-1.5 block text-sm font-bold text-[#0F172A]">Đơn vị thời gian</label>

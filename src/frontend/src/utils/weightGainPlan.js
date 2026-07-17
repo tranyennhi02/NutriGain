@@ -75,7 +75,10 @@ export function validateWeightGoalTimeline({ currentWeightKg, targetWeightKg, du
 
   // Tốc độ quá nhanh (> 1.0 kg/tháng)
   if (requiredGainPerMonth > SAFE_GAIN_MAX_KG_PER_MONTH) {
-    result.fieldErrors.target_duration_value = `Mục tiêu này tăng quá nhanh để NutriGain gợi ý thực đơn an toàn. Vui lòng tăng thời gian mục tiêu hoặc giảm cân nặng mục tiêu. Với mục tiêu tăng ${formatKgRate(weightToGain)}kg, bạn nên chọn ít nhất ${minMonths} tháng.`;
+    const suggestedMonths = minMonths;
+    const suggestedWeeks = minWeeks;
+    result.fieldErrors.target_duration_value = `Mục tiêu tăng ${formatKgRate(weightToGain)}kg trong ${durationNumber} ${normalizedUnit === "weeks" ? "tuần" : "tháng"} là quá nhanh (${formatKgRate(requiredGainPerMonth)}kg/tháng). Tốc độ an toàn tối đa là 1kg/tháng. Vui lòng chọn ít nhất ${suggestedMonths} tháng (${suggestedWeeks} tuần) hoặc giảm cân nặng mục tiêu.`;
+    result.fieldErrors.target_weight = `Với thời gian ${durationNumber} ${normalizedUnit === "weeks" ? "tuần" : "tháng"}, cân nặng mục tiêu tối đa nên là ${formatKgRate(currentWeight + (durationMonths * SAFE_GAIN_MAX_KG_PER_MONTH))}kg.`;
     return result;
   }
 
